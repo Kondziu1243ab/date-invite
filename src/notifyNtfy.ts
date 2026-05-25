@@ -1,3 +1,5 @@
+import { inviteName } from './config'
+
 function formatDatePl(isoDate: string): string {
   return new Date(`${isoDate}T12:00:00`).toLocaleDateString('pl-PL', {
     weekday: 'long',
@@ -28,7 +30,7 @@ export async function notifyScheduled(
 ): Promise<void> {
   const when = formatDatePl(isoDate)
   await sendNtfy(
-    'Randka umówiona!',
-    `TAK! 💕\n📅 ${when}\n📍 ${placeLabel}`,
+    `Randka umówiona – ${inviteName}!`,
+    `${inviteName}: TAK! 💕\n📅 ${when}\n📍 ${placeLabel}`,
   )
 }
