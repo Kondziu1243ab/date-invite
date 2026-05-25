@@ -1,0 +1,152 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f5efe6;
+  padding: 1rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.25rem;
+  width: min(92vw, 420px);
+  padding: 1.75rem 2rem;
+  background: #ffffff;
+  border: 1px solid #e8e0d5;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 1;
+}
+
+.cat-gif {
+  display: block;
+  width: 110px;
+  max-height: 100px;
+  object-fit: contain;
+  margin: 0 auto;
+  border-radius: 10px;
+}
+
+.invite-text {
+  margin: 0;
+  width: 100%;
+  font-size: 1.2rem;
+  line-height: 1.5;
+  text-align: justify;
+  color: #3d3a36;
+}
+
+.button-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+}
+
+.btn {
+  min-height: 44px;
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover {
+  transform: scale(1.03);
+}
+
+.btn-tak {
+  background: #f48fb1;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(244, 143, 177, 0.45);
+}
+
+.btn-tak:hover {
+  box-shadow: 0 6px 18px rgba(244, 143, 177, 0.55);
+}
+
+.btn-think {
+  background: #f0ebe3;
+  color: #5c574f;
+  border: 1px solid #e0d8cc;
+}
+
+.success-message {
+  margin: 0;
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #e91e63;
+}
+
+.schedule-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.form-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #5c574f;
+}
+
+.form-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e0d8cc;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: inherit;
+  color: #3d3a36;
+  background: #faf8f5;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  outline: 2px solid #f48fb1;
+  outline-offset: 1px;
+  border-color: #f48fb1;
+}
+
+.form-error {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #c62828;
+  text-align: center;
+}
+
+.btn-umow {
+  margin-top: 0.25rem;
+  align-self: center;
+  background: #e91e63;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(233, 30, 99, 0.4);
+}
+
+.btn-umow:hover {
+  box-shadow: 0 6px 18px rgba(233, 30, 99, 0.5);
+}
+
+.fleeing-btn {
+  position: fixed;
+  z-index: 1000;
+  transition: left 0.2s ease, top 0.2s ease;
+}
