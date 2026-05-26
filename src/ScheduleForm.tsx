@@ -5,8 +5,8 @@ const PLACES = [
   { value: 'park', label: 'Spacer w parku 🌳' },
   { value: 'pub', label: 'Pub 🍻' },
   { value: 'suprise', label: 'Zaskocz mnie 🤫' },
-  { value: 'kawiarnia', label: 'Kawiarnia ☕' },
-  { value: 'home', label: 'U mnie 😏' },
+  { value: 'kawiarnia', label: 'Koreanska restauracja 🍽️' },  
+  { value: 'home', label: 'U mnie 😏 (recommended)' },
 ] as const
 
 function todayIso(): string {
@@ -22,14 +22,14 @@ export default function ScheduleForm({ onScheduled }: ScheduleFormProps) {
   const [place, setPlace] = useState('')
   const [error, setError] = useState('')
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!date || !place) {
       setError('Wybierz datę i miejsce randki.')
       return
     }
 
     const label = PLACES.find((p) => p.value === place)?.label ?? place
-    void notifyScheduled(date, label)
+    await notifyScheduled(date, label)
     onScheduled()
   }
 

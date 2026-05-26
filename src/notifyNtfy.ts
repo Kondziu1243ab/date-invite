@@ -10,17 +10,33 @@ function formatDatePl(isoDate: string): string {
 }
 
 async function sendNtfy(title: string, body: string): Promise<void> {
-  const topic = import.meta.env.VITE_NTFY_TOPIC
-  if (!topic) return
+  const topic = import.meta.env.VITE_NTFY_TOPIC?.trim()
+  if (!topic) {
+    if (import.meta.env.DEV) {
+      console.warn('[ntfy] Brak VITE_NTFY_TOPIC — ustaw w .env i zrestartuj dev server.')
+    }
+    return
+  }
+
+  // Tytuł w URL zamiast nagłówka Title — lepsze CORS i polskie znaki w przeglądarce
+  const url = new URL(`https://ntfy.sh/${encodeURIComponent(topic)}`)
+  url.searchParams.set('title', title)
 
   try {
-    await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
+    const res = await fetch(url.toString(), {
       method: 'POST',
-      headers: { Title: title },
       body,
     })
-  } catch {
-    // UI działa nawet gdy powiadomienie się nie wyśle
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '')
+      if (import.meta.env.DEV) {
+        console.warn('[ntfy] Serwer odrzucił wiadomość:', res.status, detail)
+      }
+    }
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn('[ntfy] Nie udało się wysłać:', err)
+    }
   }
 }
 
