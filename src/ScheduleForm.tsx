@@ -6,7 +6,7 @@ const PLACES = [
   { value: 'pub', label: 'Pub 🍻' },
   { value: 'suprise', label: 'Zaskocz mnie 🤫' },
   { value: 'kawiarnia', label: 'Koreanska restauracja 🍽️' },  
-  { value: 'home', label: 'U mnie 😏 (recommended)' },
+  { value: 'home', label: 'U mnie 😏 (recommended) ' },
 ] as const
 
 function todayIso(): string {
