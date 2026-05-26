@@ -4,7 +4,7 @@ const PLACES = [
   { value: 'park', label: 'Spacer w parku 🌳' },
   { value: 'pub', label: 'Pub 🍻' },
   { value: 'suprise', label: 'Zaskocz mnie 🤫' },
-  { value: 'kawiarnia', label: 'Koreanska restauracja 🍽️' },  
+  { value: 'kawiarnia', label: 'Restauracja 🍽️' },  
   { value: 'home', label: 'U mnie 😏 (recommended) ' },
 ] as const
 
