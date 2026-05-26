@@ -23,7 +23,7 @@ export default function ScheduleForm({ onNext }: ScheduleFormProps) {
 
   function handleSubmit() {
     if (!date || !place) {
-      setError('Wybierz datę i miejsce randki.')
+      setError('Wybierz datę  i miejsce randki.')
       return
     }
 
