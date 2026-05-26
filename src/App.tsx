@@ -1,14 +1,23 @@
 import { useState } from 'react'
 import FleeingButton from './FleeingButton'
 import ScheduleForm from './ScheduleForm'
-import { inviteName } from './config'
+import InstagramForm from './InstagramForm'
+import { notifyScheduled } from './notifyNtfy'
 import './App.css'
 
 const CAT_GIF_URL = '/kotek.gif'
 
+type Step = 'invite' | 'schedule' | 'instagram' | 'success'
+
 export default function App() {
-  const [accepted, setAccepted] = useState(false)
-  const [scheduled, setScheduled] = useState(false)
+  const [step, setStep] = useState<Step>('invite')
+  const [date, setDate] = useState('')
+  const [place, setPlace] = useState('')
+
+  async function handleInstagramComplete(instagram: string) {
+    await notifyScheduled(date, place, instagram)
+    setStep('success')
+  }
 
   return (
     <div className="page">
@@ -19,28 +28,46 @@ export default function App() {
           alt="Słodki kotek"
         />
 
-        {!scheduled && (
-          <p className="invite-text">
-            {accepted
-              ? 'Świetnie! Wybierz termin i miejsce:'
-              : `Hej ${inviteName}, czy pójdziesz ze mną na randkę?`}
-          </p>
+        {step === 'invite' && (
+          <>
+            <p className="invite-text text-center">
+              Hej, czy pójdziesz ze mną na randkę?
+            </p>
+            <div className="button-row">
+              <button
+                type="button"
+                className="btn btn-tak"
+                onClick={() => setStep('schedule')}
+              >
+                Tak ❤️
+              </button>
+              <FleeingButton />
+            </div>
+          </>
         )}
 
-        {scheduled ? (
-          <p className="success-message">Czekam na Ciebie!</p>
-        ) : accepted ? (
-          <ScheduleForm onScheduled={() => setScheduled(true)} />
-        ) : (
-          <div className="button-row">
-            <button
-              type="button"
-              className="btn btn-tak"
-              onClick={() => setAccepted(true)}
-            >
-              Tak ❤️
-            </button>
-            <FleeingButton />
+        {step === 'schedule' && (
+          <>
+            <p className="invite-text text-center">
+              Świetnie! Wybierz termin i miejsce:
+            </p>
+            <ScheduleForm
+              onNext={(d, p) => {
+                setDate(d)
+                setPlace(p)
+                setStep('instagram')
+              }}
+            />
+          </>
+        )}
+
+        {step === 'instagram' && (
+          <InstagramForm onComplete={handleInstagramComplete} />
+        )}
+
+        {step === 'success' && (
+          <div className="success-screen">
+            <p className="success-submessage text-center">Dzięki, na pewno się odezwę! :)</p>
           </div>
         )}
       </div>

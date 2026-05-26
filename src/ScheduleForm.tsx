@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { notifyScheduled } from './notifyNtfy'
 
 const PLACES = [
   { value: 'park', label: 'Spacer w parku 🌳' },
@@ -14,23 +13,22 @@ function todayIso(): string {
 }
 
 type ScheduleFormProps = {
-  onScheduled: () => void
+  onNext: (date: string, placeLabel: string) => void
 }
 
-export default function ScheduleForm({ onScheduled }: ScheduleFormProps) {
+export default function ScheduleForm({ onNext }: ScheduleFormProps) {
   const [date, setDate] = useState('')
   const [place, setPlace] = useState('')
   const [error, setError] = useState('')
 
-  async function handleSubmit() {
+  function handleSubmit() {
     if (!date || !place) {
       setError('Wybierz datę i miejsce randki.')
       return
     }
 
     const label = PLACES.find((p) => p.value === place)?.label ?? place
-    await notifyScheduled(date, label)
-    onScheduled()
+    onNext(date, label)
   }
 
   return (

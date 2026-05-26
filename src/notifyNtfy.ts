@@ -1,4 +1,3 @@
-import { inviteName } from './config'
 
 function formatDatePl(isoDate: string): string {
   return new Date(`${isoDate}T12:00:00`).toLocaleDateString('pl-PL', {
@@ -43,10 +42,14 @@ async function sendNtfy(title: string, body: string): Promise<void> {
 export async function notifyScheduled(
   isoDate: string,
   placeLabel: string,
+  instagram?: string,
+  message?: string,
 ): Promise<void> {
   const when = formatDatePl(isoDate)
+  const instaText = instagram ? `\n📸 Insta: @${instagram.trim().replace(/^@/, '')}` : ''
+  const msgText = message ? `\n✉️ Wiadomość: ${message}` : ''
   await sendNtfy(
-    `Randka umówiona – ${inviteName}!`,
-    `${inviteName}: TAK! 💕\n📅 ${when}\n📍 ${placeLabel}`,
+    `Randka umówiona! 💕`,
+    `📅 ${when}\n📍 ${placeLabel}${instaText}${msgText}`,
   )
 }
