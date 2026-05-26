@@ -160,7 +160,7 @@ export default function InstagramForm({ onComplete }: InstagramFormProps) {
           <input
             type="text"
             className="form-input text-center"
-            placeholder="@twoj_instagram"
+            placeholder="twoj_instagram"
             value={instagram}
             onChange={(e) => {
               setInstagram(e.target.value)
