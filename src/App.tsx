@@ -3,6 +3,7 @@ import FleeingButton from './FleeingButton'
 import ScheduleForm from './ScheduleForm'
 import InstagramForm from './InstagramForm'
 import { notifyScheduled } from './notifyNtfy'
+import { inviteName } from './config'
 import './App.css'
 
 const CAT_GIF_URL = '/kotek.gif'
@@ -31,7 +32,7 @@ export default function App() {
         {step === 'invite' && (
           <>
             <p className="invite-text text-center">
-              Hej, czy pójdziesz ze mną na randkę?
+              Hej {inviteName}, czy pójdziesz ze mną na randkę?
             </p>
             <div className="button-row">
               <button
