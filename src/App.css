@@ -133,6 +133,121 @@
   text-align: center;
 }
 
+/* Place Selection Tiles */
+.place-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  position: relative;
+}
+
+.place-option {
+  min-height: 44px;
+  padding: 0.625rem 1.25rem;
+  border: 1px solid #e0d8cc;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: #3d3a36;
+  background: #faf8f5;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.15s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
+}
+
+.place-option:hover:not(:disabled) {
+  transform: scale(1.015);
+  background: #fff;
+  border-color: #f48fb1;
+  box-shadow: 0 4px 12px rgba(244, 143, 177, 0.1);
+}
+
+.place-option:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+/* Winner / Selected state (Park) */
+.place-option--selected.place-option--park-winner {
+  background: #f48fb1;
+  color: #fff;
+  border-color: #f48fb1;
+  box-shadow: 0 4px 14px rgba(244, 143, 177, 0.4);
+  cursor: default;
+  transform: none;
+  font-weight: 600;
+}
+
+/* Teased state (Park clicked first time) */
+.place-option--teased {
+  border-color: #f48fb1;
+}
+
+/* Disable pointer events during falling phase */
+.place-options:has(.place-option--falling) {
+  pointer-events: none;
+}
+
+/* Falling animation for options to be discarded */
+.place-option--falling {
+  animation: place-fall-out 0.8s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
+  pointer-events: none;
+}
+
+@keyframes place-fall-out {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  20% {
+    transform: translateY(-10px) rotate(-2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(150%) rotate(15deg);
+    opacity: 0;
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .place-option {
+    transition: none !important;
+  }
+  .place-option--falling {
+    animation: place-fade-out-reduced 0.2s ease forwards !important;
+  }
+  .place-option:hover:not(:disabled) {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+}
+
+@keyframes place-fade-out-reduced {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Joke banner styling */
+.place-banner {
+  margin: 0.5rem 0 0 0;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e91e63;
+  animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
 .btn-umow {
   margin-top: 0.25rem;
   align-self: center;
