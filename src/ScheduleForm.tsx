@@ -4,7 +4,7 @@ const PLACES = [
   { value: 'park', label: 'Spacer w parku 🌳' },
   { value: 'pub', label: 'Pub 🍻' },
   { value: 'suprise', label: 'Zaskocz mnie 🤫' },
-  { value: 'kawiarnia', label: 'Liga hot seat 🔥' },  
+  { value: 'kawiarnia', label: 'Gym, cardio, soczek 🔥' },  
   { value: 'home', label: 'Netflix and chill 🍿' },
 ] as const
 
