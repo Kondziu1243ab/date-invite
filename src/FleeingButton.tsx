@@ -28,7 +28,12 @@ function clampPosition(
   }
 }
 
-export default function FleeingButton() {
+type FleeingButtonProps = {
+  text?: string
+  onFlee?: () => void
+}
+
+export default function FleeingButton({ text = 'Zastanowię się 😉', onFlee }: FleeingButtonProps) {
   const btnRef = useRef<HTMLButtonElement>(null)
   const [hasFled, setHasFled] = useState(false)
   const [position, setPosition] = useState<{ left: number; top: number } | null>(
@@ -43,7 +48,10 @@ export default function FleeingButton() {
     const next = randomPosition(rect.width, rect.height)
     setHasFled(true)
     setPosition(next)
-  }, [])
+    if (onFlee) {
+      onFlee()
+    }
+  }, [onFlee])
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -82,9 +90,10 @@ export default function FleeingButton() {
       className={className}
       style={style}
       onClick={handleClick}
-      aria-label="Zastanowię się — przycisk ucieka po kliknięciu"
+      aria-label={text}
     >
-      Zastanowię się 😉
+      {text}
     </button>
   )
 }
+
