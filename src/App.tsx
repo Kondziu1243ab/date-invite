@@ -14,6 +14,7 @@ export default function App() {
   const [step, setStep] = useState<Step>('invite')
   const [date, setDate] = useState('')
   const [place, setPlace] = useState('')
+  const [customMessage, setCustomMessage] = useState<{ text: string; type: 'warning' | 'joke' } | null>(null)
 
   async function handleInstagramComplete(instagram: string) {
     await notifyScheduled(date, place, instagram)
@@ -40,7 +41,7 @@ export default function App() {
                 className="btn btn-tak"
                 onClick={() => setStep('schedule')}
               >
-                Tak ❤️
+                No pewnie aniołku ❤️
               </button>
               <FleeingButton />
             </div>
@@ -49,8 +50,8 @@ export default function App() {
 
         {step === 'schedule' && (
           <>
-            <p className="invite-text text-center">
-              Świetnie! Wybierz termin i miejsce:
+            <p className={`invite-text text-center ${customMessage ? `msg-${customMessage.type}` : ''}`}>
+              {customMessage ? customMessage.text : 'Świetnie! Wybierz termin i miejsce:'}
             </p>
             <ScheduleForm
               onNext={(d, p) => {
@@ -58,6 +59,7 @@ export default function App() {
                 setPlace(p)
                 setStep('instagram')
               }}
+              onMessageChange={setCustomMessage}
             />
           </>
         )}
