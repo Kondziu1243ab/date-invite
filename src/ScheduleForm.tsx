@@ -3,8 +3,9 @@ import { useState } from 'react'
 const PLACES = [
   { value: 'park', label: 'Spacer w parku 🌳' },
   { value: 'pub', label: 'Pub 🍻' },
+  { value: 'komputer', label: 'Napraw mi drukarkę 😔' },
   { value: 'suprise', label: 'Zaskocz mnie 🤫' },
-  { value: 'kawiarnia', label: 'Gym, cardio, soczek 🔥' },  
+  { value: 'kawiarnia', label: 'Zagrajmy w grę 🎮' },  
   { value: 'home', label: 'Netflix and chill 🍿' },
 ] as const
 

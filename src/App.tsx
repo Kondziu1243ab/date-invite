@@ -6,7 +6,7 @@ import { notifyScheduled } from './notifyNtfy'
 import { inviteName } from './config'
 import './App.css'
 
-const CAT_GIF_URL = '/kotek.gif'
+const CAT_GIF_URL = '/piesek.gif'
 
 type Step = 'invite' | 'schedule' | 'instagram' | 'success'
 
@@ -26,7 +26,7 @@ export default function App() {
         <img
           className="cat-gif"
           src={CAT_GIF_URL}
-          alt="Słodki kotek"
+          alt="Słodki piesek"
         />
 
         {step === 'invite' && (
