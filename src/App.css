@@ -150,3 +150,200 @@
   z-index: 1000;
   transition: left 0.2s ease, top 0.2s ease;
 }
+
+/* Custom Select Dropdown Styling */
+.custom-select-container {
+  position: relative;
+  width: 100%;
+}
+
+.custom-select-trigger {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #e0d8cc;
+  border-radius: 10px;
+  font-size: 1rem;
+  color: #3d3a36;
+  background: #faf8f5;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+.custom-select-trigger:focus,
+.custom-select-trigger.open {
+  outline: 2px solid #f48fb1;
+  outline-offset: 1px;
+  border-color: #f48fb1;
+}
+
+.custom-select-trigger.locked {
+  background: #fff0f3;
+  border-color: #ffb7c5;
+  cursor: not-allowed;
+  color: #d81b60;
+  font-weight: 600;
+  box-shadow: 0 0 8px rgba(244, 143, 177, 0.25);
+  animation: lockPulse 2s infinite ease-in-out;
+}
+
+@keyframes lockPulse {
+  0%, 100% { border-color: #ffb7c5; }
+  50% { border-color: #f48fb1; }
+}
+
+.custom-select-trigger .arrow {
+  font-size: 0.8rem;
+  color: #a89f91;
+  transition: transform 0.2s ease;
+}
+
+.custom-select-trigger.open .arrow {
+  transform: rotate(180deg);
+}
+
+.custom-select-trigger.locked .arrow {
+  transform: none;
+  font-size: 1rem;
+}
+
+.custom-select-options {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e8e0d5;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+  z-index: 100;
+  max-height: 260px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.custom-select-option {
+  padding: 0.625rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, height 0.6s, padding 0.65s, opacity 0.6s;
+  font-size: 0.95rem;
+  color: #3d3a36;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  height: 40px;
+  box-sizing: border-box;
+}
+
+.custom-select-option:hover {
+  background: #fff0f3;
+  color: #e91e63;
+}
+
+/* Animations for Options Easter Egg */
+.custom-select-option.fading-out {
+  animation: fadeOutOption 0.8s forwards cubic-bezier(0.25, 0.8, 0.25, 1);
+  pointer-events: none;
+}
+
+@keyframes fadeOutOption {
+  0% {
+    opacity: 1;
+    height: 40px;
+    padding: 0.625rem 1rem;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+}
+
+.custom-select-option.morphing {
+  pointer-events: none;
+  background: #fff0f3;
+  border-radius: 8px;
+  margin: 0 6px;
+  width: calc(100% - 12px);
+  font-weight: 600;
+  animation: morphPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes morphPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.morph-text-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.morph-text-wrapper .original-label {
+  display: inline-block;
+  animation: fadeOutOriginal 0.5s forwards cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.morph-text-wrapper .foccacia-label {
+  position: absolute;
+  left: 0;
+  opacity: 0;
+  display: inline-block;
+  color: #e91e63;
+  font-weight: bold;
+  animation: fadeInFoccacia 0.8s 0.4s forwards cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+@keyframes fadeOutOriginal {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-15px); }
+}
+
+@keyframes fadeInFoccacia {
+  0% { opacity: 0; transform: translateY(15px) scale(0.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Custom Header Text Animation */
+.foccacia-header-text {
+  color: #e91e63 !important;
+  font-weight: 700;
+  text-align: center !important;
+  font-size: 1.25rem !important;
+  animation: popBounceIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, headerPulse 2.5s infinite ease-in-out 0.8s;
+  text-shadow: 0 2px 4px rgba(233, 30, 99, 0.1);
+}
+
+@keyframes popBounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translateY(-20px);
+  }
+  70% {
+    transform: scale(1.1) translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes headerPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
