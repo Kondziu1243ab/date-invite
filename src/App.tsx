@@ -42,7 +42,6 @@ export default function App() {
 
         {step === 'success' && (
           <div className="success-screen">
-            <p className="success-message">Czekam na Ciebie! 💕</p>
             <p className="success-submessage text-center">Dzięki, na pewno się odezwę! :)</p>
           </div>
         )}
