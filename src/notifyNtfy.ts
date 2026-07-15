@@ -43,10 +43,12 @@ async function sendNtfy(title: string, body: string): Promise<void> {
 export async function notifyScheduled(
   isoDate: string,
   placeLabel: string,
+  instagram?: string,
 ): Promise<void> {
   const when = formatDatePl(isoDate)
+  const instaText = instagram ? `\n📸 Insta: @${instagram.trim().replace(/^@/, '')}` : ''
   await sendNtfy(
     `Randka umówiona – ${inviteName}!`,
-    `${inviteName}: TAK! 💕\n📅 ${when}\n📍 ${placeLabel}`,
+    `${inviteName}: TAK! 💕\n📅 ${when}\n📍 ${placeLabel}${instaText}`,
   )
 }

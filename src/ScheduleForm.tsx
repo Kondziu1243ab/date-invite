@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { notifyScheduled } from './notifyNtfy'
 
 const PLACES = [
   { value: 'park', label: 'Spacer w parku 🌳' },
@@ -16,7 +15,7 @@ function todayIso(): string {
 }
 
 type ScheduleFormProps = {
-  onScheduled: () => void
+  onScheduled: (date: string, placeLabel: string) => void
   isFoccaciaMode: boolean
   setIsFoccaciaMode: (val: boolean) => void
 }
@@ -45,15 +44,14 @@ export default function ScheduleForm({
     return () => document.removeEventListener('click', handleOutsideClick)
   }, [isOpen])
 
-  async function handleSubmit() {
+  function handleSubmit() {
     if (!date || !place) {
       setError('Wybierz datę i miejsce randki.')
       return
     }
 
     const label = PLACES.find((p) => p.value === place)?.label ?? place
-    await notifyScheduled(date, label)
-    onScheduled()
+    onScheduled(date, label)
   }
 
   function handleOptionSelect(value: string) {
