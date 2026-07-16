@@ -3,11 +3,10 @@ import { useState, useEffect } from 'react'
 const PLACES = [
   { value: 'park', label: 'Spacer w parku 🌳' },
   { value: 'pub', label: 'Pub 🍻' },
-  { value: 'komputer', label: 'Night ride 🚀' },
+  { value: 'komputer', label: 'Kino plenerowe 🎬 ' },
   { value: 'suprise', label: 'Zaskocz mnie 🤫' },
-  { value: 'kawiarnia', label: 'Zagrajmy w grę 🎮' },  
+  { value: 'kawiarnia', label: 'piwko nad wisełką 🍻' },
   { value: 'home', label: 'Netflix and chill 🍿' },
-  { value: 'foccacia', label: 'Focaccia i piknik w parku 🧺' },
 ] as const
 
 function todayIso(): string {
@@ -23,13 +22,13 @@ type ScheduleFormProps = {
 export default function ScheduleForm({
   onScheduled,
   isFoccaciaMode,
-  setIsFoccaciaMode,
+  // setIsFoccaciaMode,
 }: ScheduleFormProps) {
   const [date, setDate] = useState('')
   const [place, setPlace] = useState('')
   const [error, setError] = useState('')
   const [isOpen, setIsOpen] = useState(false)
-  const [animatingOption, setAnimatingOption] = useState<string | null>(null)
+  // const [animatingOption, setAnimatingOption] = useState<string | null>(null)
 
   // Close custom dropdown when clicking outside
   useEffect(() => {
@@ -55,6 +54,11 @@ export default function ScheduleForm({
   }
 
   function handleOptionSelect(value: string) {
+    // Normal selection behavior
+    setPlace(value)
+    setIsOpen(false)
+
+    /* Focaccia mode commented out:
     if (isFoccaciaMode || animatingOption) return
 
     setAnimatingOption(value)
@@ -66,6 +70,7 @@ export default function ScheduleForm({
       setAnimatingOption(null)
       setIsOpen(false)
     }, 1200)
+    */
   }
 
   return (
@@ -107,6 +112,7 @@ export default function ScheduleForm({
           {isOpen && (
             <ul className="custom-select-options">
               {PLACES.map((p) => {
+                /*
                 // If not in foccacia mode, hide foccacia from initial dropdown
                 if (p.value === 'foccacia' && !isFoccaciaMode && animatingOption !== 'foccacia') {
                   return null
@@ -116,8 +122,10 @@ export default function ScheduleForm({
                 if (isFoccaciaMode && p.value !== 'foccacia') {
                   return null
                 }
+                */
 
                 let optionClass = 'custom-select-option'
+                /*
                 if (animatingOption !== null) {
                   if (p.value === animatingOption) {
                     optionClass += ' morphing'
@@ -125,6 +133,7 @@ export default function ScheduleForm({
                     optionClass += ' fading-out'
                   }
                 }
+                */
 
                 return (
                   <li
@@ -132,14 +141,17 @@ export default function ScheduleForm({
                     className={optionClass}
                     onClick={() => handleOptionSelect(p.value)}
                   >
-                    {animatingOption === p.value ? (
+                    {/*
+                    animatingOption === p.value ? (
                       <span className="morph-text-wrapper">
                         <span className="original-label">{p.label}</span>
                         <span className="foccacia-label">Focaccia i piknik w parku 🧺</span>
                       </span>
                     ) : (
                       p.label
-                    )}
+                    )
+                    */}
+                    {p.label}
                   </li>
                 )
               })}
