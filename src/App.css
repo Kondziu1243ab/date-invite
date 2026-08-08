@@ -413,96 +413,95 @@
   100% { transform: translateY(-8px) scale(1.1); }
 }
 
-/* Ludzik (Character) styling & states */
-.ludzik {
+/* Road Strip */
+.road-strip {
   position: absolute;
-  bottom: 5px;
-  left: -80px; /* Start hidden on the left */
-  width: 70px;
-  height: 84px;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 12px;
+  background: #3d3a36;
+  border-top: 2px stroke #263238;
+}
+
+.road-strip::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 0;
+  width: 200%;
+  height: 2px;
+  background: dashed #fff;
+  border-top: 2px dashed #ffffff;
+  opacity: 0.7;
+}
+
+.road-strip.road-moving::after {
+  animation: road-line-move 0.3s linear infinite;
+}
+
+@keyframes road-line-move {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-40px); }
+}
+
+/* Rider + Honda Bike Group */
+.rider-bike-group {
+  position: absolute;
+  bottom: 8px;
+  left: -200px; /* Start completely off-screen behind left container wall */
+  width: 125px;
+  height: 100px;
   z-index: 10;
-  transition: left 1.2s linear;
+  transition: left 1.2s ease-out;
 }
 
-/* Phase positions for Ludzik */
-.ludzik.stage-entering {
-  left: calc(50% - 70px);
+.rider-bike-group.stage-idle {
+  left: -200px;
 }
 
-.ludzik.stage-grabbing {
-  left: calc(50% - 70px);
+.rider-bike-group.stage-packing_backpack {
+  left: 15px; /* Drives in from left wall */
+  transition: left 1.2s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-.ludzik.stage-walking {
-  left: calc(80% - 65px);
-  transition: left 1.2s linear;
+.rider-bike-group.stage-riding {
+  left: calc(75% - 105px);
+  transition: left 4.2s linear; /* Smooth, natural motorcycle ride pace */
+  animation: bike-rumble 0.15s infinite alternate ease-in-out;
 }
 
-.ludzik.stage-packing {
-  left: calc(80% - 65px);
+.rider-bike-group.stage-packing_envelope,
+.rider-bike-group.stage-flying,
+.rider-bike-group.stage-done {
+  left: calc(75% - 105px);
 }
 
-.ludzik.stage-flying {
-  left: calc(80% - 65px);
-}
-
-.ludzik.stage-done {
-  left: calc(80% - 65px);
-}
-
-/* Ludzik Walk animation (bobbing and alternate stepping) */
-.ludzik.walking-anim .left-foot {
-  animation: step-left 0.25s infinite alternate ease-in-out;
-  transform-origin: 40px 110px;
-}
-
-.ludzik.walking-anim .right-foot {
-  animation: step-right 0.25s infinite alternate ease-in-out;
-  transform-origin: 60px 110px;
-}
-
-.ludzik.walking-anim .ludzik-svg {
-  animation: body-bob 0.25s infinite alternate ease-in-out;
-}
-
-@keyframes step-left {
-  0% { transform: translateY(0) scaleY(1); }
-  100% { transform: translateY(-5px) scaleY(0.8); }
-}
-
-@keyframes step-right {
-  0% { transform: translateY(-5px) scaleY(0.8); }
-  100% { transform: translateY(0) scaleY(1); }
-}
-
-@keyframes body-bob {
+@keyframes bike-rumble {
   0% { transform: translateY(0); }
-  100% { transform: translateY(-4px); }
+  100% { transform: translateY(-2px); }
 }
 
-/* Ludzik Right Arm transformations */
-.ludzik.stage-grabbing .right-arm,
-.ludzik.stage-walking .right-arm {
-  transform: rotate(-65deg) translate(-2px, -4px);
-  transform-origin: 72px 65px;
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+/* Character on Bike styling - lowered to sit directly on the Honda seat */
+.ludzik-biker {
+  position: absolute;
+  top: -24px;
+  left: 22px;
+  width: 65px;
+  height: 78px;
+  z-index: 2;
 }
 
-.ludzik.stage-packing .right-arm {
-  transform: rotate(-10deg);
-  transform-origin: 72px 65px;
-  transition: transform 0.4s ease;
-}
-
-/* Waving arm when envelope flies */
-.ludzik.stage-flying .right-arm {
-  animation: wave-goodbye 0.25s infinite alternate ease-in-out;
-  transform-origin: 72px 65px;
-}
-
-@keyframes wave-goodbye {
-  0% { transform: rotate(-30deg); }
-  100% { transform: rotate(-75deg); }
+/* Honda Bike Image */
+.honda-bike-img {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 125px;
+  height: 75px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25));
+  z-index: 1;
 }
 
 /* Floating Instagram Text Bubble */
@@ -510,56 +509,111 @@
   position: absolute;
   background: #f48fb1;
   color: white;
-  padding: 6px 12px;
+  padding: 5px 12px;
   border-radius: 20px;
   font-weight: 600;
   font-size: 0.85rem;
   box-shadow: 0 4px 12px rgba(244, 143, 177, 0.4);
   white-space: nowrap;
   pointer-events: none;
-  z-index: 12;
-  transform: translateX(-50%) scale(0);
-  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-/* Floating Bubble Positions & Scales based on stages */
-.floating-text-bubble.stage-entering {
-  bottom: 12px;
-  left: 50%;
+  z-index: 20;
   transform: translateX(-50%) scale(1);
+  transition: all 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.floating-text-bubble.stage-grabbing {
-  bottom: 50px;
-  left: calc(50% - 15px);
-  transform: translateX(-50%) scale(1);
-  transition: bottom 0.5s cubic-bezier(0.25, 1, 0.5, 1), left 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+.floating-text-bubble.stage-packing_backpack {
+  top: 15px;
+  left: 30%;
+  animation: pop-bubble-in 0.5s ease-out forwards, float-into-pack 1.0s ease-in 0.6s forwards;
 }
 
-.floating-text-bubble.stage-walking {
-  bottom: 50px;
-  left: calc(80% - 10px);
-  transform: translateX(-50%) scale(1);
-  transition: left 1.2s linear, bottom 0.5s ease;
-}
-
-.floating-text-bubble.stage-packing {
-  bottom: 35px;
-  left: 80%;
-  transform: translateX(-50%) scale(0.1);
+.floating-text-bubble.stage-riding {
   opacity: 0;
-  transition: all 0.7s cubic-bezier(0.55, 0.085, 0.68, 0.53);
+  transform: scale(0);
 }
 
-.floating-text-bubble.stage-flying {
-  display: none;
+.floating-text-bubble.stage-packing_envelope {
+  top: 40px;
+  left: calc(75% - 20px);
+  animation: float-out-envelope 1.4s ease-in-out forwards;
+}
+
+.floating-text-bubble.stage-flying,
+.floating-text-bubble.stage-done {
+  opacity: 0;
+  transform: scale(0);
+}
+
+/* Floating Knopers Bar */
+.floating-knopers {
+  position: absolute;
+  z-index: 20;
+  pointer-events: none;
+  transition: all 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.knopers-img {
+  width: 52px;
+  height: auto;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.floating-knopers.stage-packing_backpack {
+  top: 12px;
+  left: 55%;
+  animation: pop-bubble-in 0.5s ease-out forwards, float-into-pack-knopers 1.0s ease-in 0.7s forwards;
+}
+
+.floating-knopers.stage-riding {
+  opacity: 0;
+  transform: scale(0);
+}
+
+.floating-knopers.stage-packing_envelope {
+  top: 45px;
+  left: calc(75% + 15px);
+  animation: float-out-envelope-knopers 1.4s ease-in-out forwards;
+}
+
+.floating-knopers.stage-flying,
+.floating-knopers.stage-done {
+  opacity: 0;
+  transform: scale(0);
+}
+
+@keyframes pop-bubble-in {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes float-into-pack {
+  0% { top: 15px; left: 30%; transform: scale(1); opacity: 1; }
+  100% { top: 50px; left: 45px; transform: scale(0.1); opacity: 0; }
+}
+
+@keyframes float-into-pack-knopers {
+  0% { top: 12px; left: 55%; transform: scale(1); opacity: 1; }
+  100% { top: 50px; left: 45px; transform: scale(0.1); opacity: 0; }
+}
+
+@keyframes float-out-envelope {
+  0% { top: 50px; left: calc(75% - 60px); transform: scale(0.2); opacity: 0.5; }
+  50% { top: 15px; left: calc(75% - 20px); transform: scale(0.9); opacity: 1; }
+  100% { top: 60px; left: 80%; transform: scale(0.1); opacity: 0; }
+}
+
+@keyframes float-out-envelope-knopers {
+  0% { top: 50px; left: calc(75% - 60px); transform: scale(0.2); opacity: 0.5; }
+  50% { top: 20px; left: calc(75% + 10px); transform: scale(0.9); opacity: 1; }
+  100% { top: 60px; left: 80%; transform: scale(0.1); opacity: 0; }
 }
 
 /* Envelope Wrapper & States */
 .envelope-wrapper {
   position: absolute;
   left: 80%;
-  bottom: 15px;
+  bottom: 22px;
   transform: translateX(-50%);
   width: 60px;
   height: 45px;
@@ -574,10 +628,10 @@
   bottom: 200px;
   transform: translateX(-50%) rotate(25deg) scale(0.2);
   opacity: 0;
-  transition: left 1.2s cubic-bezier(0.25, 1, 0.5, 1), 
-              bottom 1.2s cubic-bezier(0.25, 1, 0.5, 1), 
-              transform 1.2s ease, 
-              opacity 1.1s ease;
+  transition: left 1.8s cubic-bezier(0.25, 1, 0.5, 1), 
+              bottom 1.8s cubic-bezier(0.25, 1, 0.5, 1), 
+              transform 1.8s ease, 
+              opacity 1.7s ease;
 }
 
 /* Form fields transition (fade out when animating) */

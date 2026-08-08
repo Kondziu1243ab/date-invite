@@ -36,7 +36,7 @@ export default function App() {
               ? 'hej chyba bylismy juz na cos umowieni :D'
               : step === 'schedule'
                 ? 'Świetnie! Wybierz termin i miejsce:'
-                : `Hej ${inviteName}, czy pójdziesz ze mną na randkę?`}
+                : `Hej ${inviteName}, czy umówisz się ze mną?`}
           </p>
         )}
 
@@ -53,7 +53,7 @@ export default function App() {
               className="btn btn-tak"
               onClick={() => setStep('schedule')}
             >
-              Tak ❤️
+              Tak
             </button>
             <FleeingButton />
           </div>

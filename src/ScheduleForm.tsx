@@ -3,10 +3,10 @@ import { useState, useEffect } from 'react'
 const PLACES = [
   { value: 'park', label: 'Spacer w parku 🌳' },
   { value: 'pub', label: 'Pub 🍻' },
-  { value: 'komputer', label: 'Kino plenerowe 🎬 ' },
+  { value: 'kinoplener', label: 'Kino plenerowe 🎬 ' },
   { value: 'suprise', label: 'Zaskocz mnie 🤫' },
-  { value: 'kawiarnia', label: 'piwko nad wisełką 🍻' },
-  { value: 'home', label: 'Netflix and chill 🍿' },
+  { value: 'wiselka', label: 'piwko nad wisełką 🍻' },
+  { value: 'film', label: 'Film 🍿' },
 ] as const
 
 function todayIso(): string {
@@ -167,7 +167,7 @@ export default function ScheduleForm({
         className="btn btn-umow"
         onClick={handleSubmit}
       >
-        Umówieni 💌
+        Umówieni 
       </button>
     </div>
   )
