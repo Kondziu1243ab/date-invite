@@ -90,7 +90,7 @@ export default function InstagramForm({ onComplete }: InstagramFormProps) {
         {/* Floating Knopers Bar */}
         {animStage !== 'idle' && (
           <div className={`floating-knopers stage-${animStage}`}>
-            <img src="/milka.png" alt="Knopers" className="knopers-img" />
+            <img src="/knopers.png" alt="Knopers" className="knopers-img" />
           </div>
         )}
 

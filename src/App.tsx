@@ -11,7 +11,7 @@ const CAT_GIF_URL = '/kotek.gif'
 type Step = 'invite' | 'schedule' | 'instagram' | 'success'
 
 export default function App() {
-  const [step, setStep] = useState<Step>('invite')
+  const [step, setStep] = useState<Step>('schedule')
   const [date, setDate] = useState('')
   const [place, setPlace] = useState('')
   const [isFoccaciaMode, setIsFoccaciaMode] = useState(false)
@@ -35,7 +35,7 @@ export default function App() {
             {step === 'schedule' && isFoccaciaMode
               ? 'hej chyba bylismy juz na cos umowieni :D'
               : step === 'schedule'
-                ? 'Świetnie! Wybierz termin i miejsce:'
+                ? 'To kiedy spotkanko ? '
                 : `Hej ${inviteName}, czy umówisz się ze mną?`}
           </p>
         )}
