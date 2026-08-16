@@ -35,7 +35,7 @@ export default function App() {
             {step === 'schedule' && isFoccaciaMode
               ? 'hej chyba bylismy juz na cos umowieni :D'
               : step === 'schedule'
-                ? 'To kiedy spotkanko ? '
+                ? `Hej ${inviteName} to kiedy spotkanko ?`
                 : `Hej ${inviteName}, czy umówisz się ze mną?`}
           </p>
         )}
