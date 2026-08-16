@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 
 const PLACES = [
-  { value: 'park', label: 'Spacer w parku 🌳' },
+  { value: 'park', label: 'Statki w parku 🌳' },
   { value: 'pub', label: 'Pub 🍻' },
   { value: 'kinoplener', label: 'Kino plenerowe 🎬 ' },
   { value: 'suprise', label: 'Zaskocz mnie 🤫' },
-  { value: 'wiselka', label: 'piwko nad wisełką 🍻' },
-  { value: 'film', label: 'Film 🍿' },
+  { value: 'wiselka', label: 'Piwko nad wisełką 🍻' },
+  { value: 'film', label: 'Netlix & chill 🍿' },
 ] as const
 
 function todayIso(): string {
