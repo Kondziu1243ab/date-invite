@@ -1,12 +1,19 @@
 import { inviteName } from './config'
 
 function formatDatePl(isoDate: string): string {
-  return new Date(`${isoDate}T12:00:00`).toLocaleDateString('pl-PL', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
+  if (!isoDate || !isoDate.includes('-')) {
+    return isoDate || 'Wesele'
+  }
+  try {
+    return new Date(`${isoDate}T12:00:00`).toLocaleDateString('pl-PL', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  } catch {
+    return isoDate
+  }
 }
 
 async function sendNtfy(title: string, body: string): Promise<void> {
@@ -48,7 +55,7 @@ export async function notifyScheduled(
   const when = formatDatePl(isoDate)
   const instaText = instagram ? `\n📸 Insta: @${instagram.trim().replace(/^@/, '')}` : ''
   await sendNtfy(
-    `Randka umówiona – ${inviteName}!`,
-    `${inviteName}: TAK! 💕\n📅 ${when}\n📍 ${placeLabel}${instaText}`,
+    `Wesele z ${inviteName}! 💒💕`,
+    `${inviteName}: TAK! Idzie ze mną na wesele! 👰‍♀️🤵\n📅 ${when}\n📍 ${placeLabel}${instaText}`,
   )
 }

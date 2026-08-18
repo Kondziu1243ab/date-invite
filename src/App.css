@@ -672,3 +672,157 @@
   0% { transform: scale(0.8); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* ========================================================
+   VEIL MINI-GAME & FALLING ANIMATION STYLES
+   ======================================================== */
+.veil-game-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.veil-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #e91e63;
+  margin: 0;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.veil-title-hidden {
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+}
+
+.veil-fall-container {
+  position: relative;
+  width: 100%;
+  height: 380px;
+  max-height: 62vh;
+  background: linear-gradient(180deg, #fff5f8 0%, #ffffff 100%);
+  border: 2px dashed #f8bbd0;
+  border-radius: 16px;
+  overflow: hidden;
+  user-select: none;
+  touch-action: manipulation;
+  box-shadow: inset 0 2px 6px rgba(244, 143, 177, 0.08);
+}
+
+.veil-sparkle {
+  position: absolute;
+  pointer-events: none;
+  font-size: 1rem;
+  opacity: 0.45;
+  animation: float-sparkle 3s ease-in-out infinite alternate;
+}
+
+.veil-sparkle.s1 { top: 15%; left: 12%; animation-delay: 0s; }
+.veil-sparkle.s2 { top: 60%; right: 15%; animation-delay: 1s; font-size: 0.85rem; }
+.veil-sparkle.s3 { top: 35%; right: 25%; animation-delay: 1.8s; font-size: 0.9rem; }
+
+@keyframes float-sparkle {
+  0% { transform: translateY(0px) scale(0.9); opacity: 0.3; }
+  100% { transform: translateY(-8px) scale(1.1); opacity: 0.7; }
+}
+
+.veil-element {
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: pointer;
+  z-index: 10;
+  touch-action: none;
+  will-change: transform, filter, opacity;
+  transition: filter 1s ease-out, opacity 1s ease-out;
+  outline: none;
+}
+
+.veil-element:hover .wedding-veil-svg {
+  filter: drop-shadow(0 4px 10px rgba(233, 30, 99, 0.45));
+}
+
+.veil-blur-out {
+  filter: blur(14px) brightness(1.1) !important;
+  opacity: 0 !important;
+}
+
+.veil-dodge-bubble {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #e91e63;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(233, 30, 99, 0.3);
+  animation: bubble-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  pointer-events: none;
+}
+
+@keyframes bubble-pop {
+  0% { transform: translateX(-50%) scale(0.6); opacity: 0; }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+.wedding-veil-svg {
+  display: block;
+  filter: drop-shadow(0 3px 6px rgba(244, 143, 177, 0.35));
+  transition: filter 0.2s ease;
+}
+
+/* Centered Wedding Reveal Text Message */
+.wedding-reveal-message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+              transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+  z-index: 20;
+}
+
+.wedding-reveal-message.show {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.wedding-reveal-message.fade-out {
+  opacity: 0;
+  transform: scale(1.06);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.wedding-reveal-text {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #e91e63;
+  text-align: center;
+  padding: 0 1rem;
+  line-height: 1.4;
+  text-shadow: 0 2px 12px rgba(233, 30, 99, 0.2);
+}
+
+.wedding-reveal-sub {
+  font-size: 1.6rem;
+  animation: bounce-sub 1s infinite alternate ease-in-out;
+}
+
+@keyframes bounce-sub {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-4px); }
+}
+

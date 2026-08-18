@@ -82,7 +82,9 @@ export default function FleeingButton() {
       className={className}
       style={style}
       onClick={handleClick}
-      aria-label="Zastanowię się — przycisk ucieka po kliknięciu"
+      onMouseEnter={flee}
+      onTouchStart={flee}
+      aria-label="Zastanowię się — przycisk ucieka"
     >
       Zastanowię się 😉
     </button>
