@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 
 const PLACES = [
-  { value: 'park', label: 'Statki w parku 🌳' },
+  { value: 'park', label: 'Spacer w parku 🌳' },
   { value: 'pub', label: 'Pub 🍻' },
-  { value: 'kinoplener', label: 'Kino plenerowe 🎬 ' },
+  { value: 'kinoplener', label: 'Gra w Paletki 🎾' },
   { value: 'suprise', label: 'Zaskocz mnie 🤫' },
-  { value: 'wiselka', label: 'Piwko nad wisełką 🍻' },
+  { value: 'wiselka', label: 'Gotowanie 🍳' },
   { value: 'film', label: 'Netlix & chill 🍿' },
 ] as const
 
@@ -22,13 +22,11 @@ type ScheduleFormProps = {
 export default function ScheduleForm({
   onScheduled,
   isFoccaciaMode: _isFoccaciaMode,
-  // setIsFoccaciaMode,
 }: ScheduleFormProps) {
   const [date, setDate] = useState('')
-  const [place, _setPlace] = useState('')
+  const [place, setPlace] = useState('')
   const [error, setError] = useState('')
   const [isOpen, setIsOpen] = useState(false)
-  // const [animatingOption, setAnimatingOption] = useState<string | null>(null)
 
   // Close custom dropdown when clicking outside
   useEffect(() => {
@@ -44,8 +42,16 @@ export default function ScheduleForm({
   }, [isOpen])
 
   function handleSubmit() {
+    if (!date && !place) {
+      setError('Wybierz datę i aktywność.')
+      return
+    }
     if (!date) {
       setError('Wybierz datę randki.')
+      return
+    }
+    if (!place) {
+      setError('Wybierz aktywność.')
       return
     }
 
@@ -53,27 +59,10 @@ export default function ScheduleForm({
     onScheduled(date, label)
   }
 
-  /*
   function handleOptionSelect(value: string) {
-    // Normal selection behavior
     setPlace(value)
     setIsOpen(false)
-
-    /* Focaccia mode commented out:
-    if (isFoccaciaMode || animatingOption) return
-
-    setAnimatingOption(value)
-    setIsFoccaciaMode(true)
-
-    // Play transition for 1200ms, then swap to locked foccacia state
-    setTimeout(() => {
-      setPlace('foccacia')
-      setAnimatingOption(null)
-      setIsOpen(false)
-    }, 1200)
-    * /
   }
-  */
 
   return (
     <div className="schedule-form">
@@ -90,35 +79,30 @@ export default function ScheduleForm({
         />
       </label>
 
-      {/* Opcja wyboru miejsca zakomentowana:
       <label className="form-field">
-        <span className="form-label">Gdzie?</span>
         <div className="custom-select-container">
           <div
-            className={`custom-select-trigger ${isFoccaciaMode ? 'locked' : ''} ${isOpen ? 'open' : ''}`}
+            className={`custom-select-trigger ${isOpen ? 'open' : ''}`}
             onClick={() => {
-              if (!isFoccaciaMode) {
-                setIsOpen(!isOpen)
-                setError('')
-              }
+              setIsOpen(!isOpen)
+              setError('')
             }}
           >
             <span>
               {place
                 ? PLACES.find((p) => p.value === place)?.label
-                : 'Wybierz miejsce…'}
+                : 'Wybierz aktywność…'}
             </span>
-            <span className="arrow">{isFoccaciaMode ? '🔒' : '▼'}</span>
+            <span className="arrow">▼</span>
           </div>
 
           {isOpen && (
             <ul className="custom-select-options">
               {PLACES.map((p) => {
-                let optionClass = 'custom-select-option'
                 return (
                   <li
                     key={p.value}
-                    className={optionClass}
+                    className="custom-select-option"
                     onClick={() => handleOptionSelect(p.value)}
                   >
                     {p.label}
@@ -129,7 +113,6 @@ export default function ScheduleForm({
           )}
         </div>
       </label>
-      */}
 
       {error ? <p className="form-error">{error}</p> : null}
 

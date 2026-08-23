@@ -6,12 +6,12 @@ import { notifyScheduled } from './notifyNtfy'
 import { inviteName } from './config'
 import './App.css'
 
-const CAT_GIF_URL = '/kotek.gif'
+const CAT_GIF_URL = '/krolik.gif'
 
 type Step = 'invite' | 'schedule' | 'instagram' | 'success'
 
 export default function App() {
-  const [step, setStep] = useState<Step>('schedule')
+  const [step, setStep] = useState<Step>('invite')
   const [date, setDate] = useState('')
   const [place, setPlace] = useState('')
   const [isFoccaciaMode, setIsFoccaciaMode] = useState(false)
@@ -24,11 +24,13 @@ export default function App() {
   return (
     <div className="page">
       <div className="card">
-        <img
-          className="cat-gif"
-          src={CAT_GIF_URL}
-          alt="Słodki kotek"
-        />
+        {step !== 'instagram' && (
+          <img
+            className="cat-gif"
+            src={CAT_GIF_URL}
+            alt="Słodki krolik"
+          />
+        )}
 
         {(step === 'invite' || step === 'schedule') && (
           <p className={isFoccaciaMode && step === 'schedule' ? "invite-text foccacia-header-text" : "invite-text"}>
