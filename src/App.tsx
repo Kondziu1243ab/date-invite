@@ -22,7 +22,7 @@ export default function App() {
     <div className="page">
       <div className="card">
         {/* Piesek / Kotek GIF shown on invite, instagram, success screens */}
-        {step !== 'veil' && (
+        {(step !== 'veil') && (step !== 'instagram')   && (
           <img
             className="cat-gif"
             src={CAT_GIF_URL}
