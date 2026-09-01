@@ -6,7 +6,7 @@ import { notifyScheduled } from './notifyNtfy'
 import { inviteName } from './config'
 import './App.css'
 
-const CAT_GIF_URL = '/piesek.gif'
+const CAT_GIF_URL = '/krolik.gif'
 
 type Step = 'invite' | 'veil' | 'instagram' | 'success'
 
