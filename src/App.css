@@ -457,17 +457,17 @@
 }
 
 .rider-bike-group.stage-idle {
-  left: -200px;
+  left: 15px;
 }
 
 .rider-bike-group.stage-packing_backpack {
-  left: 15px; /* Drives in from left wall */
-  transition: left 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+  left: 15px;
+  animation: bike-ready-bounce 0.8s ease-in-out;
 }
 
 .rider-bike-group.stage-riding {
   left: calc(75% - 105px);
-  transition: left 4.2s linear; /* Smooth, natural motorcycle ride pace */
+  transition: left 4.0s linear;
   animation: bike-rumble 0.15s infinite alternate ease-in-out;
 }
 
@@ -477,12 +477,17 @@
   left: calc(75% - 105px);
 }
 
+@keyframes bike-ready-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
 @keyframes bike-rumble {
   0% { transform: translateY(0); }
   100% { transform: translateY(-2px); }
 }
 
-/* Character on Bike styling - lowered to sit directly on the Honda seat */
+/* Character on Bike styling */
 .ludzik-biker {
   position: absolute;
   top: -24px;
@@ -504,109 +509,226 @@
   z-index: 1;
 }
 
-/* Floating Instagram Text Bubble */
-.floating-text-bubble {
+/* Backpack pulse when packing items */
+.backpack-group.backpack-packed {
+  animation: pack-jiggle 0.6s ease 0.9s;
+}
+
+@keyframes pack-jiggle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15) rotate(-4deg); transform-origin: 22px 68px; }
+}
+
+/* Delivery Text Header & Subtext */
+.delivery-headline {
+  font-size: 1.22rem;
+  font-weight: 800;
+  color: #c2185b;
+  margin-bottom: 0.25rem;
+  line-height: 1.35;
+}
+
+.delivery-subtext {
+  font-size: 0.92rem;
+  color: #6d4c41;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+/* ========================================================
+   FLOATING DELIVERY ITEMS (TOSTY & BIMBER)
+   ======================================================== */
+.floating-delivery-item {
   position: absolute;
-  background: #f48fb1;
-  color: white;
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  box-shadow: 0 4px 12px rgba(244, 143, 177, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  z-index: 20;
+  transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.goodie-img {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.22));
+}
+
+.tosty-img {
+  width: 58px;
+  height: 52px;
+  object-fit: contain;
+}
+
+.bimber-img {
+  width: 48px;
+  height: 54px;
+  object-fit: contain;
+}
+
+.goodie-badge {
+  margin-top: 2px;
+  background: #ffb300;
+  color: #4e342e;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
   white-space: nowrap;
-  pointer-events: none;
-  z-index: 20;
-  transform: translateX(-50%) scale(1);
-  transition: all 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.floating-text-bubble.stage-packing_backpack {
-  top: 15px;
-  left: 30%;
-  animation: pop-bubble-in 0.5s ease-out forwards, float-into-pack 1.0s ease-in 0.6s forwards;
+.bimber-badge {
+  background: #d32f2f;
+  color: #ffffff;
 }
 
-.floating-text-bubble.stage-riding {
-  opacity: 0;
-  transform: scale(0);
+/* Idle Floating */
+.floating-tosty.stage-idle {
+  top: 14px;
+  left: 45%;
+  transform: translateX(-50%);
+  animation: float-gentle-1 2.4s infinite alternate ease-in-out;
 }
 
-.floating-text-bubble.stage-packing_envelope {
-  top: 40px;
-  left: calc(75% - 20px);
-  animation: float-out-envelope 1.4s ease-in-out forwards;
-}
-
-.floating-text-bubble.stage-flying,
-.floating-text-bubble.stage-done {
-  opacity: 0;
-  transform: scale(0);
-}
-
-/* Floating Knopers Bar */
-.floating-knopers {
-  position: absolute;
-  z-index: 20;
-  pointer-events: none;
-  transition: all 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.knopers-img {
-  width: 52px;
-  height: auto;
-  border-radius: 6px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
-
-.floating-knopers.stage-packing_backpack {
+.floating-bimber.stage-idle {
   top: 12px;
-  left: 55%;
-  animation: pop-bubble-in 0.5s ease-out forwards, float-into-pack-knopers 1.0s ease-in 0.7s forwards;
+  left: 70%;
+  transform: translateX(-50%);
+  animation: float-gentle-2 2.8s infinite alternate ease-in-out 0.5s;
 }
 
-.floating-knopers.stage-riding {
+@keyframes float-gentle-1 {
+  0% { transform: translateX(-50%) translateY(0) rotate(-2deg); }
+  100% { transform: translateX(-50%) translateY(-6px) rotate(3deg); }
+}
+
+@keyframes float-gentle-2 {
+  0% { transform: translateX(-50%) translateY(0) rotate(2deg); }
+  100% { transform: translateX(-50%) translateY(-7px) rotate(-3deg); }
+}
+
+/* Packing into Backpack Animation */
+.floating-tosty.stage-packing_backpack {
+  top: 14px;
+  left: 45%;
+  animation: tosty-into-backpack 1.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.floating-bimber.stage-packing_backpack {
+  top: 12px;
+  left: 70%;
+  animation: bimber-into-backpack 1.3s cubic-bezier(0.25, 1, 0.5, 1) 0.3s forwards;
+}
+
+@keyframes tosty-into-backpack {
+  0% {
+    top: 14px;
+    left: 45%;
+    transform: translateX(-50%) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  40% {
+    top: 6px;
+    left: 32%;
+    transform: translateX(-50%) scale(1.08) rotate(-10deg);
+    opacity: 1;
+  }
+  100% {
+    top: 50px;
+    left: 42px;
+    transform: translateX(-50%) scale(0.12) rotate(-30deg);
+    opacity: 0;
+  }
+}
+
+@keyframes bimber-into-backpack {
+  0% {
+    top: 12px;
+    left: 70%;
+    transform: translateX(-50%) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  40% {
+    top: 6px;
+    left: 42%;
+    transform: translateX(-50%) scale(1.08) rotate(10deg);
+    opacity: 1;
+  }
+  100% {
+    top: 50px;
+    left: 42px;
+    transform: translateX(-50%) scale(0.12) rotate(30deg);
+    opacity: 0;
+  }
+}
+
+/* While riding: items are safely in the backpack */
+.floating-tosty.stage-riding,
+.floating-bimber.stage-riding {
   opacity: 0;
   transform: scale(0);
 }
 
-.floating-knopers.stage-packing_envelope {
-  top: 45px;
-  left: calc(75% + 15px);
-  animation: float-out-envelope-knopers 1.4s ease-in-out forwards;
+/* Packing into Envelope Animation */
+.floating-tosty.stage-packing_envelope {
+  top: 50px;
+  left: calc(75% - 65px);
+  animation: tosty-into-envelope 1.4s ease-in-out forwards;
 }
 
-.floating-knopers.stage-flying,
-.floating-knopers.stage-done {
+.floating-bimber.stage-packing_envelope {
+  top: 50px;
+  left: calc(75% - 65px);
+  animation: bimber-into-envelope 1.4s ease-in-out 0.25s forwards;
+}
+
+@keyframes tosty-into-envelope {
+  0% {
+    top: 50px;
+    left: calc(75% - 65px);
+    transform: scale(0.2) rotate(-20deg);
+    opacity: 0.5;
+  }
+  45% {
+    top: 12px;
+    left: calc(75% - 20px);
+    transform: scale(0.95) rotate(5deg);
+    opacity: 1;
+  }
+  100% {
+    top: 60px;
+    left: 80%;
+    transform: scale(0.15) rotate(15deg);
+    opacity: 0;
+  }
+}
+
+@keyframes bimber-into-envelope {
+  0% {
+    top: 50px;
+    left: calc(75% - 65px);
+    transform: scale(0.2) rotate(20deg);
+    opacity: 0.5;
+  }
+  45% {
+    top: 16px;
+    left: calc(75% + 5px);
+    transform: scale(0.95) rotate(-5deg);
+    opacity: 1;
+  }
+  100% {
+    top: 60px;
+    left: 80%;
+    transform: scale(0.15) rotate(-15deg);
+    opacity: 0;
+  }
+}
+
+.floating-tosty.stage-flying,
+.floating-tosty.stage-done,
+.floating-bimber.stage-flying,
+.floating-bimber.stage-done {
   opacity: 0;
   transform: scale(0);
-}
-
-@keyframes pop-bubble-in {
-  0% { transform: scale(0); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-@keyframes float-into-pack {
-  0% { top: 15px; left: 30%; transform: scale(1); opacity: 1; }
-  100% { top: 50px; left: 45px; transform: scale(0.1); opacity: 0; }
-}
-
-@keyframes float-into-pack-knopers {
-  0% { top: 12px; left: 55%; transform: scale(1); opacity: 1; }
-  100% { top: 50px; left: 45px; transform: scale(0.1); opacity: 0; }
-}
-
-@keyframes float-out-envelope {
-  0% { top: 50px; left: calc(75% - 60px); transform: scale(0.2); opacity: 0.5; }
-  50% { top: 15px; left: calc(75% - 20px); transform: scale(0.9); opacity: 1; }
-  100% { top: 60px; left: 80%; transform: scale(0.1); opacity: 0; }
-}
-
-@keyframes float-out-envelope-knopers {
-  0% { top: 50px; left: calc(75% - 60px); transform: scale(0.2); opacity: 0.5; }
-  50% { top: 20px; left: calc(75% + 10px); transform: scale(0.9); opacity: 1; }
-  100% { top: 60px; left: 80%; transform: scale(0.1); opacity: 0; }
 }
 
 /* Envelope Wrapper & States */
@@ -634,21 +756,56 @@
               opacity 1.7s ease;
 }
 
-/* Form fields transition (fade out when animating) */
-.insta-form-fields {
-  transition: opacity 0.5s ease, transform 0.5s ease;
+/* Delivery Action Area */
+.delivery-action-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.6rem;
+  transition: opacity 0.4s ease;
 }
 
-.insta-form-fields.faded {
-  opacity: 0.4;
-  transform: scale(0.97);
+.delivery-action-wrap.in-progress {
   pointer-events: none;
 }
 
-.btn-insta-submit {
-  margin-top: 0.5rem;
-  background: #e91e63;
+.btn-delivery-action {
   width: 100%;
+  max-width: 320px;
+  padding: 0.85rem 1.6rem;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #e91e63 0%, #ff4081 100%);
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  box-shadow: 0 5px 18px rgba(233, 30, 99, 0.38);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-delivery-action:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(233, 30, 99, 0.48);
+}
+
+.btn-delivery-action:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+.btn-delivery-action:disabled {
+  background: linear-gradient(135deg, #ec407a 0%, #f48fb1 100%);
+  box-shadow: none;
+  cursor: default;
+}
+
+.delivery-hint {
+  font-size: 0.84rem;
+  color: #880e4f;
+  margin-top: 0.5rem;
+  font-weight: 600;
+  opacity: 0.85;
 }
 
 /* Success Screen Stylings */
@@ -661,11 +818,18 @@
   animation: pop-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
+.success-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #e91e63;
+  margin-bottom: 0.4rem;
+}
+
 .success-submessage {
-  margin-top: 0.5rem;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #3d3a36;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #4e342e;
+  line-height: 1.45;
 }
 
 @keyframes pop-in {

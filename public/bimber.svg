@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 160" width="140" height="160">
+  <defs>
+    <!-- Glass gradient -->
+    <linearGradient id="glassWall" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="15%" stop-color="#b2ebf2" stop-opacity="0.4"/>
+      <stop offset="85%" stop-color="#80deea" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.9"/>
+    </linearGradient>
+    <!-- Moonshine liquid gradient -->
+    <linearGradient id="bimberLiquid" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e0f7fa" stop-opacity="0.75"/>
+      <stop offset="60%" stop-color="#b2ebf2" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#80deea" stop-opacity="0.95"/>
+    </linearGradient>
+    <filter id="shadowGlass" x="-15%" y="-10%" width="135%" height="135%">
+      <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#006064" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadowGlass)">
+    <!-- Pickle (ogórek kiszony) on the side or behind rim -->
+    <g transform="rotate(-25 35 30)">
+      <!-- Pickle body -->
+      <ellipse cx="38" cy="28" rx="22" ry="9" fill="#558b2f" stroke="#33691e" stroke-width="2"/>
+      <!-- Pickle texture / bumps -->
+      <circle cx="28" cy="27" r="1.5" fill="#33691e"/>
+      <circle cx="36" cy="24" r="1.8" fill="#7cb342"/>
+      <circle cx="45" cy="29" r="1.5" fill="#33691e"/>
+      <circle cx="40" cy="32" r="1.2" fill="#7cb342"/>
+      <path d="M 22 27 Q 38 31 54 27" stroke="#33691e" stroke-width="1.2" fill="none" opacity="0.6"/>
+    </g>
+
+    <!-- Shot Glass Solid Liquid Body -->
+    <path d="M 38 48 L 44 130 C 45 138, 55 142, 70 142 C 85 142, 95 138, 96 130 L 102 48 Z"
+          fill="url(#bimberLiquid)"/>
+
+    <!-- Thick Glass Base (solid heavy bottom) -->
+    <path d="M 43 118 L 44 130 C 45 139, 54 144, 70 144 C 86 144, 95 139, 96 130 L 97 118 Z"
+          fill="#b2ebf2" stroke="#4dd0e1" stroke-width="2"/>
+
+    <!-- Glass Rim & Outer Body -->
+    <path d="M 34 42 L 42 130 C 44 142, 54 147, 70 147 C 86 147, 96 142, 98 130 L 106 42 Z"
+          fill="url(#glassWall)" stroke="#00acc1" stroke-width="2.5" stroke-linejoin="round"/>
+    <!-- Top Rim Ellipse -->
+    <ellipse cx="70" cy="42" rx="36" ry="7" fill="#e0f7fa" stroke="#00acc1" stroke-width="2.5"/>
+    <ellipse cx="70" cy="42" rx="32" ry="5" fill="#ffffff" opacity="0.6"/>
+
+    <!-- Liquid surface inside -->
+    <ellipse cx="70" cy="48" rx="32" ry="5.5" fill="#ffffff" stroke="#26c6da" stroke-width="1" opacity="0.8"/>
+
+    <!-- Fun "BIMBER 70%" Kraft Label on Glass -->
+    <g transform="translate(45, 68)">
+      <rect x="0" y="0" width="50" height="34" rx="4" fill="#fff8e1" stroke="#8d6e63" stroke-width="1.8"/>
+      <!-- Top banner line -->
+      <line x1="4" y1="5" x2="46" y2="5" stroke="#d7ccc8" stroke-width="1"/>
+      <text x="25" y="16" font-family="'Impact', 'Arial Black', sans-serif" font-size="10" font-weight="900" fill="#b71c1c" text-anchor="middle" letter-spacing="1">BIMBER</text>
+      <rect x="11" y="19" width="28" height="11" rx="2.5" fill="#d32f2f"/>
+      <text x="25" y="28" font-family="sans-serif" font-size="8" font-weight="bold" fill="#ffffff" text-anchor="middle">★ 70% ★</text>
+    </g>
+
+    <!-- Bubbles in drink -->
+    <circle cx="56" cy="115" r="2" fill="#ffffff" opacity="0.8"/>
+    <circle cx="82" cy="108" r="2.5" fill="#ffffff" opacity="0.8"/>
+    <circle cx="78" cy="120" r="1.5" fill="#ffffff" opacity="0.7"/>
+    <circle cx="64" cy="98" r="2" fill="#ffffff" opacity="0.9"/>
+    <circle cx="86" cy="56" r="1.5" fill="#ffffff" opacity="0.8"/>
+
+    <!-- Glass Reflection Highlights -->
+    <path d="M 40 50 L 47 125" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.75"/>
+    <path d="M 45 52 L 49 105" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+    <path d="M 100 50 L 94 125" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+
+    <!-- Sparkles -->
+    <path d="M 106 38 L 108 34 L 110 38 L 114 40 L 110 42 L 108 46 L 106 42 L 102 40 Z" fill="#ffd54f"/>
+  </g>
+</svg>

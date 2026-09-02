@@ -50,12 +50,12 @@ async function sendNtfy(title: string, body: string): Promise<void> {
 export async function notifyScheduled(
   isoDate: string,
   placeLabel: string,
-  instagram?: string,
+  extraInfo?: string,
 ): Promise<void> {
   const when = formatDatePl(isoDate)
-  const instaText = instagram ? `\n📸 Insta: @${instagram.trim().replace(/^@/, '')}` : ''
+  const extraText = extraInfo ? `\n🎁 ${extraInfo}` : ''
   await sendNtfy(
     `Wesele z ${inviteName}! 💒💕`,
-    `${inviteName}: TAK! Idzie ze mną na wesele! 👰‍♀️🤵\n📅 ${when}\n📍 ${placeLabel}${instaText}`,
+    `${inviteName}: TAK! Idzie ze mną na wesele! 👰‍♀️🤵\n📅 ${when}\n📍 ${placeLabel}${extraText}`,
   )
 }

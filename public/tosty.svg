@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 140" width="160" height="140">
+  <defs>
+    <linearGradient id="breadCrust" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b86b24"/>
+      <stop offset="50%" stop-color="#d9822b"/>
+      <stop offset="100%" stop-color="#965215"/>
+    </linearGradient>
+    <linearGradient id="breadFace" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fed79e"/>
+      <stop offset="40%" stop-color="#fcd087"/>
+      <stop offset="100%" stop-color="#e8a855"/>
+    </linearGradient>
+    <linearGradient id="cheeseGrad" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#ffd54f"/>
+      <stop offset="50%" stop-color="#ffb300"/>
+      <stop offset="100%" stop-color="#ff8f00"/>
+    </linearGradient>
+    <filter id="shadowToast" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#5d4037" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Group with shadow -->
+  <g filter="url(#shadowToast)">
+    <!-- Back Toast slice -->
+    <path d="M 30 95 L 85 20 C 88 16, 96 16, 99 20 L 135 75 C 138 80, 136 86, 130 90 L 45 105 C 38 106, 32 101, 30 95 Z"
+          fill="url(#breadCrust)" stroke="#795548" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M 36 91 L 86 26 C 89 22, 95 22, 98 26 L 129 74 C 132 78, 130 82, 126 85 L 48 99 C 42 100, 37 96, 36 91 Z"
+          fill="url(#breadFace)"/>
+
+    <!-- Melted Cheese oozing out -->
+    <path d="M 40 92 Q 60 98 75 92 Q 90 88 110 89 Q 125 90 128 85 C 132 80 120 76 105 76 Q 85 75 70 80 Q 55 83 40 92 Z"
+          fill="url(#cheeseGrad)" stroke="#ff8f00" stroke-width="1.5"/>
+    <!-- Dripping cheese drops -->
+    <path d="M 68 92 C 68 106, 76 106, 76 92 Z" fill="#ffb300"/>
+    <circle cx="72" cy="108" r="3.5" fill="#ffb300"/>
+    <path d="M 98 90 C 98 101, 104 101, 104 90 Z" fill="#ffb300"/>
+
+    <!-- Front Toast Slice -->
+    <path d="M 22 105 L 75 32 C 78 28, 86 28, 89 32 L 128 88 C 132 93, 129 100, 123 103 L 36 117 C 30 118, 24 112, 22 105 Z"
+          fill="url(#breadCrust)" stroke="#795548" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M 28 101 L 76 38 C 79 34, 85 34, 88 38 L 122 87 C 125 91, 123 96, 118 98 L 39 111 C 34 112, 30 107, 28 101 Z"
+          fill="url(#breadFace)"/>
+
+    <!-- Grill Marks on front toast -->
+    <line x1="45" y1="95" x2="80" y2="45" stroke="#a0522d" stroke-width="4.5" stroke-linecap="round" opacity="0.65"/>
+    <line x1="60" y1="102" x2="98" y2="52" stroke="#a0522d" stroke-width="4.5" stroke-linecap="round" opacity="0.65"/>
+    <line x1="78" y1="106" x2="112" y2="65" stroke="#a0522d" stroke-width="4.5" stroke-linecap="round" opacity="0.65"/>
+
+    <!-- Butter Shine / Sparkle -->
+    <path d="M 52 75 Q 55 68 62 70 Q 56 78 52 75 Z" fill="#ffffff" opacity="0.7"/>
+    <circle cx="108" cy="85" r="2" fill="#ffffff" opacity="0.8"/>
+    <circle cx="48" cy="62" r="1.5" fill="#ffffff" opacity="0.8"/>
+  </g>
+</svg>

@@ -13,16 +13,16 @@ type Step = 'invite' | 'veil' | 'instagram' | 'success'
 export default function App() {
   const [step, setStep] = useState<Step>('invite')
 
-  async function handleInstagramComplete(instagram: string) {
-    await notifyScheduled('Wesele', 'Wesele', instagram)
+  async function handleDeliveryComplete(info?: string) {
+    await notifyScheduled('Wesele', 'Wesele', info || 'Pakiet dobroci: tosty + bimber!')
     setStep('success')
   }
 
   return (
     <div className="page">
       <div className="card">
-        {/* Piesek / Kotek GIF shown on invite, instagram, success screens */}
-        {(step !== 'veil') && (step !== 'instagram')   && (
+        {/* Piesek / Kotek GIF shown on invite and success screens */}
+        {(step !== 'veil') && (step !== 'instagram') && (
           <img
             className="cat-gif"
             src={CAT_GIF_URL}
@@ -54,15 +54,15 @@ export default function App() {
           <VeilGame onComplete={() => setStep('instagram')} />
         )}
 
-        {/* Step 3: Instagram Form with Bike Envelope Animation */}
+        {/* Step 3: Care Package Delivery Animation (Tosty + Bimber na Hondzie) */}
         {step === 'instagram' && (
-          <InstagramForm onComplete={handleInstagramComplete} />
+          <InstagramForm onComplete={handleDeliveryComplete} />
         )}
 
         {/* Step 4: Final Success Screen */}
         {step === 'success' && (
           <div className="success-screen">
-            <p className="success-submessage text-center">Dzięki, widzimy się na instagramie! :)</p>
+            <p className="success-submessage text-center">Dzięki! :)</p>
           </div>
         )}
       </div>
