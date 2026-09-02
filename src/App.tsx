@@ -34,7 +34,7 @@ export default function App() {
         {step === 'invite' && (
           <>
             <p className="invite-text text-center">
-              Hej {inviteName}, czy pójdziesz ze mną na wesele ?
+              Hej {inviteName}, czy pójdziesz ze mną na wesele 05 września 2026 ?
             </p>
             <div className="button-row">
               <button
