@@ -39,3 +39,12 @@ export async function notifyScheduled(): Promise<void> {
     `${inviteName} said YES! 👰‍♀️🤵 Will you marry me? -> YES! 💕`,
   )
 }
+
+export async function notifyPicnicScheduled(date: string, items: string[]): Promise<void> {
+  const itemsText = items.length > 0 ? items.join(', ') : 'brak (ale i tak będzie super!)'
+  await sendNtfy(
+    `Randka na piknik potwierdzona! 🧺💕`,
+    `${inviteName} wybrała datę: ${date}!\nZebrane na piknik: ${itemsText}\nDo zobaczenia :p`,
+  )
+}
+

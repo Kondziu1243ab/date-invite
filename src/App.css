@@ -1230,5 +1230,374 @@
   }
 }
 
+/* =========================================================
+   Spring Checkpoint, Picnic Mode & Final Screen Styles
+   ========================================================= */
 
+.game-picnic-counter {
+  color: #2e7d32;
+  font-size: 0.82rem;
+  font-weight: 800;
+  white-space: nowrap;
+  background: #e8f5e9;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #c8e6c9;
+}
+
+.checkpoint-overlay {
+  background: rgba(46, 125, 50, 0.28);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+
+.checkpoint-card {
+  max-width: 320px;
+  border: 2px solid #81c784;
+  box-shadow: 0 12px 32px rgba(46, 125, 50, 0.2);
+  cursor: default;
+  animation: checkpoint-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes checkpoint-pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.checkpoint-badge {
+  display: inline-block;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid #a5d6a7;
+}
+
+.checkpoint-title {
+  color: #2e7d32;
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.checkpoint-btn {
+  background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%);
+  box-shadow: 0 4px 14px rgba(67, 160, 71, 0.38);
+}
+
+.checkpoint-btn:hover {
+  box-shadow: 0 6px 18px rgba(67, 160, 71, 0.5);
+  transform: scale(1.03);
+}
+
+.checkpoint-hint {
+  font-size: 0.72rem;
+  color: #757575;
+  margin-top: -2px;
+}
+
+.modal-actions-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.game-subtle-btn {
+  background: #f5f5f5;
+  color: #616161;
+  border: 1px solid #e0e0e0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.game-subtle-btn:hover {
+  background: #eeeeee;
+  color: #424242;
+}
+
+/* Picnic results and date picker */
+.card-picnic {
+  max-width: 440px;
+  animation: card-appear 0.4s ease-out forwards;
+}
+
+@keyframes card-appear {
+  0% { transform: translateY(12px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.picnic-results-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.1rem;
+  width: 100%;
+}
+
+.picnic-heading {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #c2185b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.picnic-items-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.35rem 0;
+}
+
+.picnic-item-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #fff5f8;
+  border: 1.5px solid #f8bbd0;
+  border-radius: 999px;
+  padding: 5px 12px;
+  box-shadow: 0 2px 6px rgba(233, 30, 99, 0.08);
+  animation: badge-pop 0.3s ease-out forwards;
+}
+
+@keyframes badge-pop {
+  0% { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.picnic-item-thumb {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.picnic-item-emoji {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.picnic-item-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #4a354f;
+}
+
+.picnic-empty {
+  font-size: 0.9rem;
+  color: #888;
+  font-style: italic;
+  margin: 0.5rem 0;
+}
+
+.picnic-schedule-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed #f0d5df;
+}
+
+.picnic-date-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  align-items: center;
+}
+
+.picnic-prompt-text {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #3d3a36;
+}
+
+.picnic-date-input {
+  max-width: 240px;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-umow-locked {
+  background: #e0d8cc !important;
+  color: #8c827a !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  opacity: 0.6;
+}
+
+.btn-umow-ready {
+  background: linear-gradient(135deg, #e91e63 0%, #ff4081 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(233, 30, 99, 0.45) !important;
+  animation: pulse-button 1.8s infinite ease-in-out;
+  cursor: pointer !important;
+}
+
+@keyframes pulse-button {
+  0%, 100% { transform: scale(1); box-shadow: 0 4px 16px rgba(233, 30, 99, 0.45); }
+  50% { transform: scale(1.04); box-shadow: 0 6px 22px rgba(233, 30, 99, 0.65); }
+}
+
+.final-celebration-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.2rem;
+  padding: 1rem 0;
+  animation: card-appear 0.4s ease-out forwards;
+}
+
+.final-gif {
+  width: 130px;
+  max-height: 120px;
+}
+
+.final-message-title {
+  font-size: 2.3rem;
+  font-weight: 900;
+  color: #e91e63;
+  margin: 0;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 8px rgba(233, 30, 99, 0.15);
+}
+
+.final-details {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.final-date-tag {
+  background: #fce4ec;
+  color: #c2185b;
+  font-weight: 800;
+  font-size: 1.05rem;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid #f8bbd0;
+}
+
+.final-picnic-tag {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2e7d32;
+}
+
+/* Event freeze alert banner */
+.game-event-banner {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 28;
+  pointer-events: none;
+  width: 90%;
+  max-width: 320px;
+  animation: banner-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes banner-pop {
+  0% { transform: translate(-50%, -50%) scale(0.65); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.event-banner-card {
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  border: 2px solid #e91e63;
+  border-radius: 18px;
+  padding: 1.1rem 1.2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 0 25px rgba(233, 30, 99, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.4rem;
+}
+
+.event-banner-card.type-storm {
+  border-color: #0288d1;
+  box-shadow: 0 10px 30px rgba(2, 136, 209, 0.35);
+}
+
+.event-banner-card.type-gust {
+  border-color: #f57c00;
+  box-shadow: 0 10px 30px rgba(245, 124, 0, 0.35);
+}
+
+.event-banner-card.type-wind_right {
+  border-color: #e65100;
+  box-shadow: 0 10px 30px rgba(230, 81, 0, 0.4);
+}
+
+.event-banner-card.type-rose {
+  border-color: #d32f2f;
+  background: linear-gradient(135deg, #fff5f7 0%, #ffffff 100%);
+  box-shadow: 0 12px 38px rgba(211, 47, 47, 0.45);
+}
+
+.event-banner-title {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #c2185b;
+  letter-spacing: 0.02em;
+}
+
+.event-banner-card.type-storm .event-banner-title {
+  color: #0277bd;
+}
+
+.event-banner-card.type-gust .event-banner-title {
+  color: #ef6c00;
+}
+
+.event-banner-card.type-wind_right .event-banner-title {
+  color: #bf360c;
+}
+
+.event-banner-card.type-rose .event-banner-title {
+  color: #c62828;
+  animation: rose-glow 0.8s infinite alternate;
+}
+
+@keyframes rose-glow {
+  0% { transform: scale(1); text-shadow: 0 0 4px rgba(211, 47, 47, 0.3); }
+  100% { transform: scale(1.05); text-shadow: 0 0 12px rgba(211, 47, 47, 0.6); }
+}
+
+.event-banner-sub {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #424242;
+  line-height: 1.35;
+}
+
+.checkpoint-btn:disabled {
+  opacity: 0.55 !important;
+  cursor: wait !important;
+  transform: none !important;
+}
 
