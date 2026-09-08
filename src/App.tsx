@@ -1,40 +1,39 @@
 import { useState } from 'react'
 import FleeingButton from './FleeingButton'
 import VeilGame from './VeilGame'
-import InstagramForm from './InstagramForm'
 import { notifyScheduled } from './notifyNtfy'
 import { inviteName } from './config'
 import './App.css'
 
 const CAT_GIF_URL = '/krolik.gif'
 
-type Step = 'invite' | 'veil' | 'instagram' | 'success'
+type Step = 'invite' | 'veil' | 'success'
 
 export default function App() {
   const [step, setStep] = useState<Step>('invite')
 
-  async function handleDeliveryComplete(info?: string) {
-    await notifyScheduled('Wesele', 'Wesele', info || 'Pakiet dobroci: tosty + bimber!')
+  async function handleVeilComplete() {
+    await notifyScheduled()
     setStep('success')
   }
 
   return (
     <div className="page">
       <div className="card">
-        {/* Piesek / Kotek GIF shown on invite and success screens */}
-        {(step !== 'veil') && (step !== 'instagram') && (
+        {/* Cute GIF shown on invite and success screens */}
+        {step !== 'veil' && (
           <img
             className="cat-gif"
             src={CAT_GIF_URL}
-            alt="Słodki zwierzak"
+            alt="Cute celebration"
           />
         )}
 
-        {/* Step 1: Initial Question with Tak and Fleeing Button */}
+        {/* Step 1: Initial Question: Will you marry me? with Yes and Fleeing Button */}
         {step === 'invite' && (
           <>
             <p className="invite-text text-center">
-              Hej {inviteName}, czy pójdziesz ze mną na wesele 05 września 2026 ?
+              Hey {inviteName}, will you marry me?
             </p>
             <div className="button-row">
               <button
@@ -42,7 +41,7 @@ export default function App() {
                 className="btn btn-tak"
                 onClick={() => setStep('veil')}
               >
-                Tak 💕
+                Yes 💕
               </button>
               <FleeingButton />
             </div>
@@ -51,21 +50,18 @@ export default function App() {
 
         {/* Step 2: Falling Veil Game / Animation */}
         {step === 'veil' && (
-          <VeilGame onComplete={() => setStep('instagram')} />
+          <VeilGame onComplete={handleVeilComplete} />
         )}
 
-        {/* Step 3: Care Package Delivery Animation (Tosty + Bimber na Hondzie) */}
-        {step === 'instagram' && (
-          <InstagramForm onComplete={handleDeliveryComplete} />
-        )}
-
-        {/* Step 4: Final Success Screen */}
+        {/* Step 3: Final Success Screen */}
         {step === 'success' && (
           <div className="success-screen">
-            <p className="success-submessage text-center">Dzięki! :)</p>
+            <h2 className="success-title">Yay! You said YES! 💕💍</h2>
+            <p className="success-submessage text-center">Can't wait! :)</p>
           </div>
         )}
       </div>
     </div>
   )
 }
+

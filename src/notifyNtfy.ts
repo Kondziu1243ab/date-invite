@@ -1,20 +1,6 @@
-import { inviteName } from './config'
 
-function formatDatePl(isoDate: string): string {
-  if (!isoDate || !isoDate.includes('-')) {
-    return isoDate || 'Wesele'
-  }
-  try {
-    return new Date(`${isoDate}T12:00:00`).toLocaleDateString('pl-PL', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    })
-  } catch {
-    return isoDate
-  }
-}
+
+import { inviteName } from './config'
 
 async function sendNtfy(title: string, body: string): Promise<void> {
   const topic = import.meta.env.VITE_NTFY_TOPIC?.trim()
@@ -47,15 +33,9 @@ async function sendNtfy(title: string, body: string): Promise<void> {
   }
 }
 
-export async function notifyScheduled(
-  isoDate: string,
-  placeLabel: string,
-  extraInfo?: string,
-): Promise<void> {
-  const when = formatDatePl(isoDate)
-  const extraText = extraInfo ? `\n🎁 ${extraInfo}` : ''
+export async function notifyScheduled(): Promise<void> {
   await sendNtfy(
-    `Wesele z ${inviteName}! 💒💕`,
-    `${inviteName}: TAK! Idzie ze mną na wesele! 👰‍♀️🤵\n📅 ${when}\n📍 ${placeLabel}${extraText}`,
+    `Proposal accepted! 💍💕`,
+    `${inviteName} said YES! 👰‍♀️🤵 Will you marry me? -> YES! 💕`,
   )
 }

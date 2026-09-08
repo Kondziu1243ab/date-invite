@@ -38,7 +38,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
     dodgeOffsetRef.current += impulse
 
     // Show brief playful feedback text
-    const funnyWords = ['Ucieka! 💨', 'Ooo nie! 🤭', 'Prawie! ✨', 'Hyca! 👰‍♀️']
+    const funnyWords = ['Too fast! 💨', 'Oops! 🤭', 'Almost! ✨', 'Nope! 👰‍♀️']
     const word = funnyWords[Math.floor(Math.random() * funnyWords.length)]
     setDodgeMessage(word)
     setTimeout(() => {
@@ -140,7 +140,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
             : ''
         }`}
       >
-        Złap Welon !
+        Catch the veil!
       </p>
 
       {/* Main Game Fall Area */}
@@ -165,7 +165,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
             onTouchStart={handleVeilClick}
             role="button"
             tabIndex={0}
-            aria-label="Welon"
+            aria-label="Veil"
           >
             {/* Dodge Word Indicator */}
             {dodgeMessage && (
@@ -290,7 +290,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
           </div>
         )}
 
-        {/* Center Text Transition: "Może na weselu sie uda :D" */}
+        {/* Center Text Transition: "Maybe at our wedding :D" */}
         <div
           className={`wedding-reveal-message ${
             phase === 'wedding_text'
@@ -301,7 +301,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
           }`}
         >
           <span className="wedding-reveal-text">
-            Może na weselu sie uda :D
+            Maybe at our wedding :D
           </span>
           <span className="wedding-reveal-sub">💃🥂🤵</span>
         </div>

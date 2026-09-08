@@ -84,9 +84,9 @@ export default function FleeingButton() {
       onClick={handleClick}
       onMouseEnter={flee}
       onTouchStart={flee}
-      aria-label="Zastanowię się — przycisk ucieka"
+      aria-label="Let me think — button runs away"
     >
-      Zastanowię się 😉
+      Let me think 😉
     </button>
   )
 }
