@@ -1103,5 +1103,132 @@
   padding: 2px 0;
 }
 
+/* PixiJS game shell: fullscreen on phones, compact phone-shaped window on desktop. */
+.page-game {
+  padding: 0;
+}
+
+.card-game {
+  width: min(100vw, 420px);
+  height: min(100dvh, 740px);
+  min-height: 0;
+  padding: 0.75rem;
+  gap: 0;
+  border: 2px solid #f8bbd0;
+  overflow: hidden;
+}
+
+.card-game .veil-game-wrapper {
+  height: 100%;
+  min-height: 0;
+}
+
+.card-game .game-arena-container {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  border-radius: 12px;
+}
+
+.veil-pixi-host,
+.veil-pixi-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.veil-pixi-host {
+  position: absolute;
+  inset: 0;
+}
+
+.game-pause-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 10px;
+  color: #ffffff;
+  background: #c5577c;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.game-pause-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.game-pearl-counter {
+  color: #ad1457;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.mobile-game-controls {
+  display: none;
+}
+
+.success-line {
+  margin: 0;
+  color: #3d3a36;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .page-game {
+    display: block;
+    min-height: 100dvh;
+    background: #fff7f8;
+  }
+
+  .card-game {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+  }
+
+  .mobile-game-controls {
+    position: absolute;
+    right: 16px;
+    bottom: max(18px, env(safe-area-inset-bottom));
+    left: 16px;
+    z-index: 25;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .game-control {
+    display: grid;
+    width: 62px;
+    height: 62px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    color: #ffffff;
+    background: rgba(79, 53, 73, 0.38);
+    box-shadow: 0 4px 14px rgba(69, 49, 79, 0.18);
+    font-size: 2rem;
+    line-height: 1;
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+
+  .game-control:active {
+    background: rgba(79, 53, 73, 0.62);
+    transform: scale(0.94);
+  }
+}
+
 
 

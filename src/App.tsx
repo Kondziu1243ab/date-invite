@@ -11,15 +11,17 @@ type Step = 'invite' | 'veil' | 'success'
 
 export default function App() {
   const [step, setStep] = useState<Step>('invite')
+  const [earnedPearls, setEarnedPearls] = useState(0)
 
-  async function handleVeilComplete() {
+  async function handleVeilComplete(pearls: number) {
     await notifyScheduled()
+    setEarnedPearls(pearls)
     setStep('success')
   }
 
   return (
-    <div className="page">
-      <div className="card">
+    <div className={`page ${step === 'veil' ? 'page-game' : ''}`}>
+      <div className={`card ${step === 'veil' ? 'card-game' : ''}`}>
         {/* Cute GIF shown on invite and success screens */}
         {step !== 'veil' && (
           <img
@@ -56,8 +58,7 @@ export default function App() {
         {/* Step 3: Final Success Screen */}
         {step === 'success' && (
           <div className="success-screen">
-            <h2 className="success-title">Yay! You said YES! 💕💍</h2>
-            <p className="success-submessage text-center">Can't wait! :)</p>
+            <p className="success-line">You got it. I think I owe you {earnedPearls} pearls :p So when Wedding?</p>
           </div>
         )}
       </div>

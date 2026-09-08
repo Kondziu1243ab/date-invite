@@ -1,535 +1,221 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Application, Container, Graphics, Rectangle, type Ticker } from 'pixi.js'
 
-type VeilGameProps = {
-  onComplete: () => void
+type VeilGameProps = { onComplete: (pearls: number) => void }
+type GameState = 'ready' | 'playing' | 'paused' | 'gameover' | 'victory'
+type BiomeId = 'autumn' | 'winter' | 'spring'
+type EntityKind = 'hazard' | 'pearl' | 'heart'
+type Metrics = { width: number; height: number; xScale: number; yScale: number; unit: number }
+type Entity = { view: Graphics; kind: EntityKind; x: number; y: number; vx: number; vy: number; radius: number; spin: number; active: boolean }
+type Runtime = {
+  state: GameState; elapsed: number; lives: number; pearls: number; biome: BiomeId
+  player: { x: number; y: number; vx: number; vy: number; invulnerableUntil: number }
+  metrics: Metrics; nextHazardAt: number; nextPearlAt: number; nextHeartAt: number; nextEventAt: number
+  eventEndsAt: number; eventWind: number; eventLift: number; message: string | null; messageEndsAt: number; lastHudAt: number
 }
 
-type GameState = 'ready' | 'playing' | 'gameover' | 'victory'
-type Biome = 'autumn' | 'winter'
+const TOTAL_DURATION = 72_000
+const BIOMES: readonly { id: BiomeId; label: string; until: number; event: string }[] = [
+  { id: 'autumn', label: '🍂 Autumn Breeze', until: 22_000, event: 'Warm Gust' },
+  { id: 'winter', label: '❄️ Winter Frost', until: 46_000, event: 'Snow Squall' },
+  { id: 'spring', label: '🌼 Spring Meadow', until: TOTAL_DURATION, event: 'Bloom Current' },
+]
 
-interface Obstacle {
-  x: number
-  y: number
-  vy: number
-  emoji: string
-  size: number
+const biomeAt = (elapsed: number) => BIOMES.find((biome) => elapsed < biome.until) ?? BIOMES[BIOMES.length - 1]
+const createMetrics = (width: number, height: number): Metrics => ({ width, height, xScale: Math.max(width / 340, 0.72), yScale: Math.max(height / 520, 0.72), unit: Math.max(Math.min(width / 340, height / 520), 0.72) })
+
+function drawPlayer(view: Graphics, size: number): void {
+  view.clear()
+  // A single floating sheet of tulle with a narrow band and a scalloped lace hem.
+  view.moveTo(-size * 0.17, -size * 0.32)
+    .quadraticCurveTo(0, -size * 0.38, size * 0.17, -size * 0.32)
+    .bezierCurveTo(size * 0.24, -size * 0.04, size * 0.46, size * 0.2, size * 0.34, size * 0.54)
+    .quadraticCurveTo(size * 0.27, size * 0.68, size * 0.15, size * 0.57)
+    .quadraticCurveTo(size * 0.05, size * 0.73, -size * 0.05, size * 0.58)
+    .quadraticCurveTo(-size * 0.2, size * 0.7, -size * 0.31, size * 0.52)
+    .bezierCurveTo(-size * 0.45, size * 0.17, -size * 0.24, -size * 0.06, -size * 0.17, -size * 0.32)
+    .closePath()
+    .fill({ color: 0xffffff, alpha: 0.82 })
+    .stroke({ width: 1.3 * size / 64, color: 0xe9a5c0, alpha: 0.9, join: 'round' })
+  view.moveTo(-size * 0.1, -size * 0.26)
+    .bezierCurveTo(-size * 0.24, size * 0.04, -size * 0.15, size * 0.31, -size * 0.16, size * 0.56)
+    .stroke({ width: 1.2 * size / 64, color: 0xf6d4e3, alpha: 0.9 })
+  view.moveTo(size * 0.08, -size * 0.25)
+    .bezierCurveTo(size * 0.25, size * 0.03, size * 0.19, size * 0.28, size * 0.17, size * 0.55)
+    .stroke({ width: 1.2 * size / 64, color: 0xf6d4e3, alpha: 0.9 })
+  view.roundRect(-size * 0.2, -size * 0.39, size * 0.4, size * 0.075, size * 0.035)
+    .fill(0xd879a3)
+  view.circle(-size * 0.09, -size * 0.355, size * 0.015).fill(0xffffff)
+  view.circle(0, -size * 0.355, size * 0.015).fill(0xffffff)
+  view.circle(size * 0.09, -size * 0.355, size * 0.015).fill(0xffffff)
 }
 
-interface Particle {
-  x: number
-  y: number
-  speedY: number
-  speedX: number
-  char: string
-  size: number
+function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
+  const { view } = entity
+  view.clear()
+  if (entity.kind === 'pearl') {
+    entity.radius = 11 * unit
+    view.circle(0, 0, entity.radius).fill(0xfff9f1).circle(entity.radius * 0.27, entity.radius * 0.27, entity.radius * 0.68).fill({ color: 0xf4bad5, alpha: 0.5 })
+    view.circle(-entity.radius * 0.32, -entity.radius * 0.32, entity.radius * 0.22).fill(0xffffff).circle(0, 0, entity.radius).stroke({ width: 1.4, color: 0xe5a4c1, alpha: 0.85 })
+    return
+  }
+  if (entity.kind === 'heart') {
+    entity.radius = 15 * unit
+    const r = entity.radius
+    view.circle(-r * 0.45, -r * 0.2, r * 0.55).fill(0xef476f).circle(r * 0.45, -r * 0.2, r * 0.55).fill(0xef476f).poly([-r, 0, r, 0, 0, r * 1.2], true).fill(0xef476f)
+    view.circle(-r * 0.35, -r * 0.38, r * 0.16).fill({ color: 0xffffff, alpha: 0.72 })
+    return
+  }
+  entity.radius = (biome === 'winter' ? 19 : 17) * unit
+  const r = entity.radius
+  if (biome === 'winter') {
+    view.poly([-r, -r * 0.65, r, -r * 0.65, r * 0.55, r, -r * 0.7, r], true).fill(0xc7e8f3).poly([-r * 0.45, -r * 0.55, r * 0.45, -r * 0.55, 0, r * 0.55], true).fill(0xeffcff)
+    view.poly([-r, -r * 0.65, r, -r * 0.65, r * 0.55, r, -r * 0.7, r], true).stroke({ width: 1.5, color: 0x6d95b8 })
+  } else if (biome === 'spring') {
+    for (let index = 0; index < 5; index += 1) { const angle = Math.PI * 2 * index / 5; view.circle(Math.cos(angle) * r * 0.56, Math.sin(angle) * r * 0.56, r * 0.48).fill(0xff8fb1) }
+    view.circle(0, 0, r * 0.38).fill(0xffd166)
+  } else {
+    view.circle(0, 0, r).fill(0x9a6139).arc(0, 0, r * 0.62, Math.PI, Math.PI * 2).stroke({ width: 2, color: 0xf6c27c, alpha: 0.8 })
+    view.moveTo(0, -r).lineTo(r * 0.45, -r * 1.4).stroke({ width: 2, color: 0x5c8f61 })
+  }
+}
+
+function drawBackdrop(view: Graphics, metrics: Metrics, biome: BiomeId): void {
+  const palette = biome === 'autumn' ? [0xfffbf5, 0xfceddc, 0xf6b27f] : biome === 'winter' ? [0xf4fafd, 0xe3f2fd, 0x9ec5e5] : [0xf7fff1, 0xe5f7d5, 0x9fd596]
+  view.clear().rect(0, 0, metrics.width, metrics.height * 0.48).fill(palette[0]).rect(0, metrics.height * 0.48, metrics.width, metrics.height * 0.52).fill(palette[1]).rect(0, metrics.height * 0.82, metrics.width, metrics.height * 0.18).fill({ color: palette[2], alpha: 0.2 })
 }
 
 export default function VeilGame({ onComplete }: VeilGameProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  // React state ONLY for UI overlays and HUD updates (no per-frame React re-renders!)
+  const hostRef = useRef<HTMLDivElement>(null)
+  const controlsRef = useRef<{ start: () => void; pause: () => void; steer: (direction: -1 | 1) => void } | null>(null)
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
   const [gameState, setGameState] = useState<GameState>('ready')
-  const [biome, setBiome] = useState<Biome>('autumn')
   const [lives, setLives] = useState(3)
+  const [pearls, setPearls] = useState(0)
+  const [biome, setBiome] = useState<BiomeId>('autumn')
   const [progress, setProgress] = useState(0)
-  const [biomeToast, setBiomeToast] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+  const [error, setError] = useState(false)
+  const startGame = useCallback(() => controlsRef.current?.start(), [])
+  const togglePause = useCallback(() => controlsRef.current?.pause(), [])
 
-  // Fast mutable game state for 60-120fps hardware-accelerated Canvas loop
-  const gameRef = useRef({
-    state: 'ready' as GameState,
-    biome: 'autumn' as Biome,
-    lives: 3,
-    progress: 0,
-    startTime: 0,
-    totalDuration: 19000, // ~19 seconds to reach altar
-    veil: {
-      x: 140,
-      y: 70,
-      vx: 0,
-      vy: 0,
-      width: 64,
-      height: 70,
-      invulnerableFrames: 0,
-    },
-    obstacles: [] as Obstacle[],
-    particles: [] as Particle[],
-    lastSpawn: 0,
-    hitFlashFrames: 0,
-    animId: 0,
-    lastTime: 0,
-    width: 340,
-    height: 380,
-  })
-
-  // Start / Restart
-  const startGame = useCallback(() => {
-    const g = gameRef.current
-    const canvas = canvasRef.current
-    const width = canvas?.parentElement?.clientWidth || 340
-    const height = 380
-
-    g.width = width
-    g.height = height
-    g.state = 'playing'
-    g.biome = 'autumn'
-    g.lives = 3
-    g.progress = 0
-    g.startTime = performance.now()
-    g.lastSpawn = performance.now()
-    g.hitFlashFrames = 0
-    g.obstacles = []
-
-    // Spawn initial ambient particles
-    g.particles = []
-    for (let i = 0; i < 14; i++) {
-      g.particles.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        speedY: 0.7 + Math.random() * 0.8,
-        speedX: (Math.random() - 0.5) * 0.6,
-        char: Math.random() > 0.5 ? '🍁' : '🍂',
-        size: 14 + Math.floor(Math.random() * 8),
-      })
+  useEffect(() => {
+    const host = hostRef.current
+    if (!host) return
+    let disposed = false
+    let app: Application | null = null
+    let finishTimer: number | null = null
+    let resizeObserver: ResizeObserver | null = null
+    let tickerUpdate: ((ticker: Ticker) => void) | null = null
+    const playerView = new Graphics(); const backdrop = new Graphics(); const particleLayer = new Container(); const itemLayer = new Container(); const hazardLayer = new Container(); const playerLayer = new Container()
+    const particles: Graphics[] = []; const entities: Entity[] = []; const entityPool: Entity[] = []
+    const runtime: Runtime = { state: 'ready', elapsed: 0, lives: 3, pearls: 0, biome: 'autumn', player: { x: 170, y: 110, vx: 0, vy: 0, invulnerableUntil: 0 }, metrics: createMetrics(Math.max(host.clientWidth, 1), Math.max(host.clientHeight, 1)), nextHazardAt: 1200, nextPearlAt: 2600, nextHeartAt: Infinity, nextEventAt: 7000, eventEndsAt: 0, eventWind: 0, eventLift: 0, message: null, messageEndsAt: 0, lastHudAt: 0 }
+    const syncHud = (force = false) => {
+      if (!force && runtime.elapsed - runtime.lastHudAt < 120) return
+      runtime.lastHudAt = runtime.elapsed; setLives(runtime.lives); setPearls(runtime.pearls); setBiome(runtime.biome); setProgress(Math.min(100, Math.floor(runtime.elapsed / TOTAL_DURATION * 100))); setGameState(runtime.state); setToast(runtime.message)
     }
-
-    g.veil = {
-      x: width / 2 - 32,
-      y: 60,
-      vx: 0,
-      vy: -1.2,
-      width: 64,
-      height: 70,
-      invulnerableFrames: 0,
+    const recycle = (entity: Entity) => { entity.active = false; entity.view.visible = false; entityPool.push(entity) }
+    const recycleAll = () => { while (entities.length) recycle(entities.pop()!) }
+    const acquire = (kind: EntityKind): Entity => {
+      const entity = entityPool.pop() ?? { view: new Graphics(), kind, x: 0, y: 0, vx: 0, vy: 0, radius: 0, spin: 0, active: false }
+      entity.kind = kind; entity.active = true; entity.view.visible = true; entity.view.rotation = 0; entity.view.alpha = 1
+      const layer = kind === 'hazard' ? hazardLayer : itemLayer
+      if (entity.view.parent !== layer) layer.addChild(entity.view)
+      entities.push(entity); return entity
     }
-
-    setGameState('playing')
-    setBiome('autumn')
-    setLives(3)
-    setProgress(0)
-    setBiomeToast(null)
+    const spawn = (kind: EntityKind) => {
+      const m = runtime.metrics; const entity = acquire(kind)
+      entity.x = 28 * m.xScale + Math.random() * Math.max(1, m.width - 56 * m.xScale); entity.y = -42 * m.yScale; entity.vx = (Math.random() - 0.5) * 30 * m.xScale; entity.vy = (kind === 'hazard' ? 150 : 125) * m.yScale; entity.spin = (Math.random() - 0.5) * (kind === 'hazard' ? 1.4 : 2.2)
+      drawEntity(entity, runtime.biome, m.unit)
+    }
+    const message = (next: string, duration: number) => { runtime.message = next; runtime.messageEndsAt = runtime.elapsed + duration; syncHud(true) }
+    const applyBiome = (next: BiomeId, announce: boolean) => { runtime.biome = next; if (announce) message(`${biomeAt(runtime.elapsed).label.replace(/^..\s/, '')}!`, 2000); drawBackdrop(backdrop, runtime.metrics, next); for (const particle of particles) particle.tint = next === 'autumn' ? 0xd17b52 : next === 'winter' ? 0xffffff : 0xffe08a }
+    const damage = () => {
+      if (runtime.elapsed < runtime.player.invulnerableUntil || runtime.state !== 'playing') return
+      runtime.lives -= 1; runtime.player.invulnerableUntil = runtime.elapsed + 850; runtime.player.vy = -210 * runtime.metrics.yScale; runtime.nextHeartAt = runtime.lives > 0 ? runtime.elapsed + 4500 : Infinity; message('Ouch! Find a heart.', 950)
+      if (runtime.lives <= 0) runtime.state = 'gameover'
+      syncHud(true)
+    }
+    const beginEvent = () => {
+      const direction = Math.random() < 0.5 ? -1 : 1
+      if (runtime.biome === 'spring') runtime.eventLift = -230 * runtime.metrics.yScale
+      else runtime.eventWind = direction * (runtime.biome === 'winter' ? 145 : 82) * runtime.metrics.xScale
+      runtime.eventEndsAt = runtime.elapsed + 2800; message(`${biomeAt(runtime.elapsed).event}\nRide the current`, 1350); runtime.nextEventAt = runtime.elapsed + 9000 + Math.random() * 2000
+    }
+    const finish = () => { if (runtime.state !== 'playing') return; runtime.state = 'victory'; runtime.message = null; syncHud(true); finishTimer = window.setTimeout(() => onCompleteRef.current(runtime.pearls), 900) }
+    const reset = () => {
+      recycleAll(); runtime.state = 'playing'; runtime.elapsed = 0; runtime.lives = 3; runtime.pearls = 0; runtime.biome = 'autumn'; runtime.nextHazardAt = 1200; runtime.nextPearlAt = 2600; runtime.nextHeartAt = Infinity; runtime.nextEventAt = 7000; runtime.eventEndsAt = 0; runtime.eventWind = 0; runtime.eventLift = 0; runtime.message = 'Autumn Breeze'; runtime.messageEndsAt = 1300
+      runtime.player = { x: runtime.metrics.width / 2, y: runtime.metrics.height * 0.27, vx: 0, vy: -90 * runtime.metrics.yScale, invulnerableUntil: 0 }; applyBiome('autumn', false); syncHud(true)
+    }
+    const layout = () => {
+      if (!app) return
+      const old = runtime.metrics; const x = old.width ? runtime.player.x / old.width : 0.5; const y = old.height ? runtime.player.y / old.height : 0.3
+      runtime.metrics = createMetrics(Math.max(app.screen.width, 1), Math.max(app.screen.height, 1)); runtime.player.x = Math.min(Math.max(x * runtime.metrics.width, 28 * runtime.metrics.xScale), runtime.metrics.width - 28 * runtime.metrics.xScale); runtime.player.y = Math.min(Math.max(y * runtime.metrics.height, 58 * runtime.metrics.yScale), runtime.metrics.height - 30 * runtime.metrics.yScale)
+      drawBackdrop(backdrop, runtime.metrics, runtime.biome); drawPlayer(playerView, 64 * runtime.metrics.unit); app.stage.hitArea = new Rectangle(0, 0, runtime.metrics.width, runtime.metrics.height)
+    }
+    const movePlayer = (delta: number) => {
+      const m = runtime.metrics; const player = runtime.player; const seconds = delta / 1000; const gravity = runtime.biome === 'winter' ? 1.12 : runtime.biome === 'spring' ? 0.84 : 1; const damping = runtime.biome === 'winter' ? 0.975 : 0.955
+      player.vy += (760 * gravity * m.yScale + runtime.eventLift) * seconds; player.vx += (Math.sin(runtime.elapsed / 750) * 28 * m.xScale + runtime.eventWind) * seconds; player.vx *= Math.pow(damping, delta / 16.67); player.x += player.vx * seconds; player.y += player.vy * seconds
+      const edge = 30 * m.xScale
+      if (player.x < edge) { player.x = edge; player.vx = Math.abs(player.vx) * 0.35 }
+      if (player.x > m.width - edge) { player.x = m.width - edge; player.vx = -Math.abs(player.vx) * 0.35 }
+      if (player.y < 36 * m.yScale) { player.y = 36 * m.yScale; player.vy = Math.max(player.vy, 80 * m.yScale) }
+      if (player.y > m.height - 32 * m.yScale) { player.y = m.height - 32 * m.yScale; player.vy = -300 * m.yScale; damage() }
+      playerLayer.position.set(player.x, player.y); playerLayer.rotation = Math.max(-0.3, Math.min(0.34, player.vy / (1100 * m.yScale))); playerLayer.alpha = runtime.elapsed < player.invulnerableUntil && Math.floor(runtime.elapsed / 90) % 2 === 0 ? 0.3 : 1
+    }
+    const moveEntities = (delta: number) => {
+      const seconds = delta / 1000; const next: Entity[] = []
+      for (const entity of entities) {
+        entity.x += (entity.vx + runtime.eventWind * (entity.kind === 'hazard' ? 0.22 : 0.08)) * seconds; entity.y += entity.vy * seconds; entity.view.position.set(entity.x, entity.y); entity.view.rotation += entity.spin * seconds
+        if (entity.y > runtime.metrics.height + 55 * runtime.metrics.yScale || entity.x < -60 || entity.x > runtime.metrics.width + 60) { recycle(entity); continue }
+        if (Math.hypot(runtime.player.x - entity.x, runtime.player.y - entity.y) < entity.radius + 24 * runtime.metrics.unit) {
+          if (entity.kind === 'hazard') damage()
+          if (entity.kind === 'pearl') runtime.pearls += 1
+          if (entity.kind === 'heart' && runtime.lives < 3) { runtime.lives += 1; runtime.nextHeartAt = runtime.elapsed + 16000; message('Heart restored! ♥', 1000) }
+          recycle(entity); continue
+        }
+        next.push(entity)
+      }
+      entities.length = 0; entities.push(...next)
+    }
+    const moveParticles = (delta: number) => { for (let i = 0; i < particles.length; i += 1) { const particle = particles[i]; particle.y += (18 + i % 4 * 7) * runtime.metrics.yScale * delta / 1000; particle.x += Math.sin(runtime.elapsed / 600 + i) * 0.35 * runtime.metrics.xScale; if (particle.y > runtime.metrics.height + 10) { particle.y = -8; particle.x = (i * 53 + runtime.elapsed / 19) % runtime.metrics.width } } }
+    const tick = (ticker: Ticker) => {
+      if (runtime.state !== 'playing') return
+      const delta = Math.min(ticker.deltaMS, 34); runtime.elapsed += delta
+      if (runtime.elapsed >= TOTAL_DURATION) { finish(); return }
+      const nextBiome = biomeAt(runtime.elapsed).id
+      if (nextBiome !== runtime.biome) applyBiome(nextBiome, true)
+      if (runtime.eventEndsAt && runtime.elapsed >= runtime.eventEndsAt) { runtime.eventEndsAt = 0; runtime.eventWind = 0; runtime.eventLift = 0 }
+      if (runtime.elapsed >= runtime.nextEventAt && !runtime.eventEndsAt) beginEvent()
+      if (runtime.elapsed >= runtime.nextHazardAt) { spawn('hazard'); const base = runtime.biome === 'winter' ? 1050 : runtime.biome === 'spring' ? 1230 : 1350; runtime.nextHazardAt = runtime.elapsed + base + Math.random() * 500 }
+      if (runtime.elapsed >= runtime.nextPearlAt) { spawn('pearl'); runtime.nextPearlAt = runtime.elapsed + 2650 + Math.random() * 850 }
+      if (runtime.lives < 3 && runtime.elapsed >= runtime.nextHeartAt) { spawn('heart'); runtime.nextHeartAt = runtime.elapsed + 16000 }
+      movePlayer(delta); moveEntities(delta); moveParticles(delta); if (runtime.message && runtime.elapsed >= runtime.messageEndsAt) runtime.message = null; syncHud()
+    }
+    const steer = (direction: -1 | 1) => { if (runtime.state !== 'playing') return; runtime.player.vy = -330 * runtime.metrics.yScale; runtime.player.vx += direction * 155 * runtime.metrics.xScale }
+    const handlePointer = (x: number) => { if (runtime.state === 'ready' || runtime.state === 'gameover') { reset(); return }; steer(x < runtime.metrics.width / 2 ? -1 : 1) }
+    const handleKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { controlsRef.current?.pause(); return }; if (![' ', 'ArrowLeft', 'ArrowRight', 'a', 'A', 'd', 'D'].includes(event.key)) return; event.preventDefault(); if (runtime.state === 'ready' || runtime.state === 'gameover') { reset(); return }; if (runtime.state !== 'playing') return; runtime.player.vy = -330 * runtime.metrics.yScale; if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'A') runtime.player.vx -= 155 * runtime.metrics.xScale; if (event.key === 'ArrowRight' || event.key === 'd' || event.key === 'D') runtime.player.vx += 155 * runtime.metrics.xScale }
+    controlsRef.current = { start: reset, pause: () => { if (runtime.state === 'playing') runtime.state = 'paused'; else if (runtime.state === 'paused') runtime.state = 'playing'; syncHud(true) }, steer }
+    const init = async () => {
+      try {
+        const nextApp = new Application()
+        await nextApp.init({ resizeTo: host, preference: 'webgl', antialias: true, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2), sharedTicker: false, backgroundAlpha: 1, eventFeatures: { move: false, globalMove: false, click: true, wheel: false } })
+        if (disposed) { nextApp.destroy({ removeView: true, releaseGlobalResources: true }, { children: true, texture: true, textureSource: true }); return }
+        app = nextApp; app.canvas.classList.add('veil-pixi-canvas'); host.appendChild(app.canvas); app.stage.addChild(backdrop, particleLayer, itemLayer, hazardLayer, playerLayer); playerLayer.addChild(playerView); app.stage.eventMode = 'static'; app.stage.interactiveChildren = false; app.stage.on('pointerdown', (event) => handlePointer(event.global.x))
+        for (let index = 0; index < 20; index += 1) { const particle = new Graphics().circle(0, 0, 1.5 + index % 3).fill({ color: 0xd17b52, alpha: 0.28 }); particle.position.set((index * 47) % runtime.metrics.width, (index * 83) % runtime.metrics.height); particles.push(particle); particleLayer.addChild(particle) }
+        layout(); tickerUpdate = tick; app.ticker.add(tickerUpdate); resizeObserver = new ResizeObserver(() => { app?.resize(); layout() }); resizeObserver.observe(host); window.addEventListener('keydown', handleKey)
+      } catch (initError) { console.error('Could not initialize Veil Run', initError); if (!disposed) setError(true) }
+    }
+    void init()
+    return () => { disposed = true; if (finishTimer) window.clearTimeout(finishTimer); resizeObserver?.disconnect(); window.removeEventListener('keydown', handleKey); controlsRef.current = null; if (app) { if (tickerUpdate) app.ticker.remove(tickerUpdate); app.destroy({ removeView: true, releaseGlobalResources: true }, { children: true, texture: true, textureSource: true }) } }
   }, [])
 
-  // Responsive pointer tap (steers and bounces)
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent<HTMLCanvasElement>) => {
-      const g = gameRef.current
-      if (g.state === 'ready') {
-        startGame()
-        return
-      }
-      if (g.state !== 'playing') return
-
-      const canvas = canvasRef.current
-      if (!canvas) return
-      const rect = canvas.getBoundingClientRect()
-      const clickX = e.clientX - rect.left
-      const isLeft = clickX < rect.width / 2
-
-      // Flappy-like instant lift with zero input latency
-      g.veil.vy = -6.2
-
-      // Directional impulse
-      if (isLeft) {
-        g.veil.vx = 2.8
-      } else {
-        g.veil.vx = -2.8
-      }
-    },
-    [startGame]
-  )
-
-  // Main Canvas Rendering Loop (Silky smooth 60 FPS)
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d', { alpha: false })
-    if (!ctx) return
-
-    const g = gameRef.current
-
-    // Setup high-DPI crisp canvas
-    const updateCanvasSize = () => {
-      const rect = canvas.getBoundingClientRect()
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
-      canvas.width = rect.width * dpr
-      canvas.height = rect.height * dpr
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      g.width = rect.width
-      g.height = rect.height
-    }
-    updateCanvasSize()
-
-    let lastProgressUpdate = 0
-
-    const renderLoop = (now: number) => {
-      if (!g.lastTime) g.lastTime = now
-      const delta = Math.min(now - g.lastTime, 40)
-      g.lastTime = now
-
-      const width = g.width
-      const height = g.height
-
-      // 1. Draw Background Gradient
-      const isWinter = g.biome === 'winter'
-      const bgGrad = ctx.createLinearGradient(0, 0, 0, height)
-      if (!isWinter) {
-        bgGrad.addColorStop(0, '#fff3e0')
-        bgGrad.addColorStop(0.5, '#fbe9e7')
-        bgGrad.addColorStop(1, '#fce4ec')
-      } else {
-        bgGrad.addColorStop(0, '#e1f5fe')
-        bgGrad.addColorStop(0.5, '#e8eaf6')
-        bgGrad.addColorStop(1, '#ede7f6')
-      }
-      ctx.fillStyle = bgGrad
-      ctx.fillRect(0, 0, width, height)
-
-      // 2. Active Game Logic
-      if (g.state === 'playing') {
-        const elapsed = now - g.startTime
-        const currentProgress = Math.min(100, Math.floor((elapsed / g.totalDuration) * 100))
-
-        if (currentProgress !== g.progress) {
-          g.progress = currentProgress
-          // Throttle progress state update to React every 150ms to keep 60fps smooth
-          if (now - lastProgressUpdate > 150) {
-            lastProgressUpdate = now
-            setProgress(currentProgress)
-          }
-        }
-
-        // Biome switch at 50%
-        if (currentProgress >= 50 && g.biome === 'autumn') {
-          g.biome = 'winter'
-          setBiome('winter')
-          setBiomeToast('❄️ Winter Peak Reached!')
-          setTimeout(() => setBiomeToast(null), 2500)
-          // Switch ambient particles to snowflakes
-          g.particles.forEach((p) => {
-            p.char = Math.random() > 0.5 ? '❄️' : '✨'
-          })
-        }
-
-        // Physics
-        const v = g.veil
-        if (v.invulnerableFrames > 0) v.invulnerableFrames--
-
-        v.vy += 0.24 * (delta / 16) // Gravity
-        v.vx *= 0.965 // Air damping
-        v.x += v.vx * (delta / 16)
-        v.y += v.vy * (delta / 16)
-
-        // Walls
-        if (v.x < 4) {
-          v.x = 4
-          v.vx = 0
-        } else if (v.x > width - v.width - 4) {
-          v.x = width - v.width - 4
-          v.vx = 0
-        }
-
-        // Ceiling
-        if (v.y < 0) {
-          v.y = 0
-          v.vy = 0.5
-        }
-
-        // Floor bounce check
-        const maxY = height - v.height - 4
-        if (v.y >= maxY) {
-          v.y = maxY
-          v.vy = -5.8 // Bounce up
-
-          if (v.invulnerableFrames === 0) {
-            v.invulnerableFrames = 50
-            g.hitFlashFrames = 8
-            g.lives--
-            setLives(g.lives)
-
-            if (g.lives <= 0) {
-              g.state = 'gameover'
-              setGameState('gameover')
-            }
-          }
-        }
-
-        // Obstacles Spawn
-        const spawnInterval = isWinter ? 1250 : 1450
-        if (now - g.lastSpawn > spawnInterval) {
-          g.lastSpawn = now
-          const emoji = isWinter
-            ? Math.random() > 0.5 ? '🧊' : '❄️'
-            : Math.random() > 0.5 ? '🍂' : '🌰'
-
-          g.obstacles.push({
-            x: 20 + Math.random() * (width - 55),
-            y: -30,
-            vy: 1.9 + Math.random() * 0.9,
-            emoji,
-            size: 28,
-          })
-        }
-
-        // Obstacles update & collision
-        const nextObstacles: Obstacle[] = []
-        for (const obs of g.obstacles) {
-          obs.y += obs.vy * (delta / 16)
-
-          const veilCenterX = v.x + v.width / 2
-          const veilCenterY = v.y + v.height / 2
-          const obsCenterX = obs.x + obs.size / 2
-          const obsCenterY = obs.y + obs.size / 2
-
-          const dist = Math.hypot(veilCenterX - obsCenterX, veilCenterY - obsCenterY)
-          if (dist < 32 && v.invulnerableFrames === 0) {
-            // Hit!
-            v.invulnerableFrames = 50
-            g.hitFlashFrames = 8
-            v.vy = -3.2
-            g.lives--
-            setLives(g.lives)
-
-            if (g.lives <= 0) {
-              g.state = 'gameover'
-              setGameState('gameover')
-              break
-            }
-            continue // Drop obstacle on hit
-          }
-
-          if (obs.y < height + 40) {
-            nextObstacles.push(obs)
-          }
-        }
-        g.obstacles = nextObstacles
-
-        // Win check
-        if (currentProgress >= 100) {
-          g.state = 'victory'
-          setGameState('victory')
-          setTimeout(() => {
-            onComplete()
-          }, 2400)
-        }
-      }
-
-      // 3. Draw Ambient Particles
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      for (const p of g.particles) {
-        p.y += p.speedY * (delta / 16)
-        p.x += p.speedX * (delta / 16)
-        if (p.y > height + 20) {
-          p.y = -20
-          p.x = Math.random() * width
-        }
-        ctx.font = `${p.size}px sans-serif`
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
-        ctx.fillText(p.char, p.x, p.y)
-      }
-
-      // 4. Draw Obstacles
-      ctx.font = '28px sans-serif'
-      for (const obs of g.obstacles) {
-        ctx.fillText(obs.emoji, obs.x + 14, obs.y + 14)
-      }
-
-      // 5. Draw Veil (Crisp vector rendering on Canvas)
-      const v = g.veil
-      const isBlinking = v.invulnerableFrames > 0 && Math.floor(v.invulnerableFrames / 4) % 2 === 0
-
-      if (!isBlinking) {
-        ctx.save()
-        ctx.translate(v.x + 32, v.y + 35)
-        ctx.rotate((v.vx * 3.5 * Math.PI) / 180)
-
-        // Veil shadow
-        ctx.shadowColor = isWinter ? 'rgba(129, 212, 250, 0.5)' : 'rgba(244, 143, 177, 0.5)'
-        ctx.shadowBlur = 8
-        ctx.shadowOffsetY = 4
-
-        // Back tulle layer
-        ctx.beginPath()
-        ctx.moveTo(-18, -15)
-        ctx.bezierCurveTo(-38, 5, -42, 35, -34, 52)
-        ctx.bezierCurveTo(-20, 58, -10, 48, 0, 54)
-        ctx.bezierCurveTo(10, 48, 20, 58, 34, 52)
-        ctx.bezierCurveTo(42, 35, 38, 5, 18, -15)
-        ctx.closePath()
-
-        const tulleGrad = ctx.createLinearGradient(0, -20, 0, 55)
-        tulleGrad.addColorStop(0, 'rgba(255, 255, 255, 0.96)')
-        tulleGrad.addColorStop(0.6, 'rgba(255, 240, 245, 0.88)')
-        tulleGrad.addColorStop(1, 'rgba(255, 228, 230, 0.75)')
-        ctx.fillStyle = tulleGrad
-        ctx.fill()
-
-        ctx.strokeStyle = isWinter ? '#81d4fa' : '#f48fb1'
-        ctx.lineWidth = 1.5
-        ctx.stroke()
-
-        // Scalloped lace hem
-        ctx.shadowColor = 'transparent'
-        ctx.beginPath()
-        ctx.arc(-22, 53, 5, 0, Math.PI)
-        ctx.arc(-11, 54, 5, 0, Math.PI)
-        ctx.arc(0, 54, 5, 0, Math.PI)
-        ctx.arc(11, 54, 5, 0, Math.PI)
-        ctx.arc(22, 53, 5, 0, Math.PI)
-        ctx.strokeStyle = isWinter ? '#0288d1' : '#e91e63'
-        ctx.lineWidth = 1.5
-        ctx.stroke()
-
-        // Tiara Headband
-        ctx.beginPath()
-        ctx.arc(0, -14, 20, Math.PI * 0.8, Math.PI * 0.2, true)
-        ctx.strokeStyle = '#ec407a'
-        ctx.lineWidth = 3
-        ctx.lineCap = 'round'
-        ctx.stroke()
-
-        // Tiara gems
-        ctx.fillStyle = '#e91e63'
-        ctx.beginPath()
-        ctx.arc(0, -18, 5, 0, Math.PI * 2)
-        ctx.fill()
-
-        ctx.fillStyle = '#ffffff'
-        ctx.beginPath()
-        ctx.arc(0, -18, 2, 0, Math.PI * 2)
-        ctx.fill()
-
-        ctx.fillStyle = '#f8bbd0'
-        ctx.beginPath()
-        ctx.arc(-9, -17, 3.5, 0, Math.PI * 2)
-        ctx.arc(9, -17, 3.5, 0, Math.PI * 2)
-        ctx.fill()
-
-        ctx.restore()
-      }
-
-      // 6. Hit Red Flash overlay (for responsive damage feedback)
-      if (g.hitFlashFrames > 0) {
-        g.hitFlashFrames--
-        ctx.fillStyle = 'rgba(244, 67, 54, 0.28)'
-        ctx.fillRect(0, 0, width, height)
-      }
-
-      g.animId = requestAnimationFrame(renderLoop)
-    }
-
-    g.animId = requestAnimationFrame(renderLoop)
-
-    const handleResize = () => updateCanvasSize()
-    window.addEventListener('resize', handleResize)
-
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      if (g.animId) cancelAnimationFrame(g.animId)
-    }
-  }, [onComplete])
-
-  return (
-    <div className="veil-game-wrapper">
-      {/* Top Header: Lives & Stage badge */}
-      <div className="game-top-bar">
-        <div className="game-lives" title={`${lives} lives remaining`}>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <span
-              key={i}
-              className={`game-heart ${i < lives ? 'heart-alive' : 'heart-lost'}`}
-            >
-              {i < lives ? '❤️' : '🖤'}
-            </span>
-          ))}
-        </div>
-
-        <span className="game-stage-pill">
-          {biome === 'autumn' ? '🍂 Autumn Breeze' : '❄️ Winter Frost'}
-        </span>
-      </div>
-
-      {/* Progress Track */}
-      <div className="game-progress-wrapper">
-        <div className="game-progress-bar">
-          <div
-            className="game-progress-fill"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <span className="game-goal-icon">💒</span>
-      </div>
-
-      {/* Hardware-Accelerated 60FPS Canvas Arena */}
-      <div className={`game-arena-container ${biome}`}>
-        {biomeToast && <div className="biome-toast">{biomeToast}</div>}
-
-        <canvas
-          ref={canvasRef}
-          className="game-canvas"
-          onPointerDown={handlePointerDown}
-        />
-
-        {/* Start / Ready Overlay */}
-        {gameState === 'ready' && (
-          <div className="game-overlay">
-            <div className="game-modal-card">
-              <span className="modal-icon">👰‍♀️💨</span>
-              <h3 className="modal-heading">Keep the Veil Flying!</h3>
-              <p className="modal-text">
-                Tap anywhere to bounce. Tap the left or right side to steer and dodge obstacles!
-              </p>
-              <button
-                type="button"
-                className="game-primary-btn"
-                onClick={startGame}
-              >
-                Start Playing ✨
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Game Over Screen */}
-        {gameState === 'gameover' && (
-          <div className="game-overlay">
-            <div className="game-modal-card">
-              <span className="modal-icon">💨💔</span>
-              <h3 className="modal-heading">The Veil Fell!</h3>
-              <p className="modal-text">
-                Don't give up! Tap gently to keep it floating all the way to the altar.
-              </p>
-              <button
-                type="button"
-                className="game-primary-btn"
-                onClick={startGame}
-              >
-                Play Again 🔄
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Victory Screen */}
-        {gameState === 'victory' && (
-          <div className="game-overlay">
-            <div className="game-modal-card victory-card">
-              <span className="modal-icon">💒💍✨</span>
-              <h3 className="modal-heading">You Made It!</h3>
-              <p className="modal-text">
-                The veil reached the altar safely! 💕
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Steering hint */}
-      <div className="game-steering-hint">
-        <span>👈 Tap Left to steer Right</span>
-        <span>•</span>
-        <span>Tap Right to steer Left 👉</span>
-      </div>
-    </div>
-  )
+  const stageLabel = BIOMES.find((item) => item.id === biome)?.label ?? BIOMES[0].label
+  return <div className="veil-game-wrapper">
+    <div className="game-top-bar"><div className="game-lives" aria-label={`${lives} lives remaining`}>{Array.from({ length: 3 }).map((_, index) => <span key={index} className={`game-heart ${index < lives ? 'heart-alive' : 'heart-lost'}`}>{index < lives ? '❤️' : '🖤'}</span>)}</div><span className="game-stage-pill">{stageLabel}</span><button type="button" className="game-pause-btn" onClick={togglePause} disabled={gameState === 'ready' || gameState === 'gameover' || gameState === 'victory'}>{gameState === 'paused' ? 'Resume' : 'Pause'}</button></div>
+    <div className="game-progress-wrapper"><div className="game-progress-bar"><div className="game-progress-fill" style={{ width: `${progress}%` }} /></div><span className="game-pearl-counter">◌ {pearls}</span><span className="game-goal-icon">💒</span></div>
+    <div className={`game-arena-container ${biome}`}><div ref={hostRef} className="veil-pixi-host" aria-label="Veil Run game area" />{toast && <div className="biome-toast">{toast}</div>}<div className="mobile-game-controls" aria-label="Touch controls"><button type="button" className="game-control game-control-left" aria-label="Steer left" onPointerDown={(event) => { event.preventDefault(); controlsRef.current?.steer(-1) }}>←</button><button type="button" className="game-control game-control-right" aria-label="Steer right" onPointerDown={(event) => { event.preventDefault(); controlsRef.current?.steer(1) }}>→</button></div>{error && <div className="game-overlay"><div className="game-modal-card"><h3 className="modal-heading">The game could not start</h3><p className="modal-text">Please refresh and try again.</p></div></div>}{gameState === 'ready' && !error && <div className="game-overlay"><div className="game-modal-card"><h3 className="modal-heading">Keep the Veil Flying!</h3><p className="modal-text">Use the arrows to lift and steer. Avoid obstacles, collect pearls and restore hearts.</p><button type="button" className="game-primary-btn" onClick={startGame}>Start Playing</button></div></div>}{gameState === 'paused' && <div className="game-overlay"><div className="game-modal-card"><h3 className="modal-heading">Paused</h3><p className="modal-text">Take a breath, then catch the next breeze.</p><button type="button" className="game-primary-btn" onClick={togglePause}>Resume</button></div></div>}{gameState === 'gameover' && <div className="game-overlay"><div className="game-modal-card"><h3 className="modal-heading">The Veil Fell!</h3><p className="modal-text">Collect a heart after a hit and keep flying toward the altar.</p><button type="button" className="game-primary-btn" onClick={startGame}>Play Again</button></div></div>}{gameState === 'victory' && <div className="game-overlay"><div className="game-modal-card victory-card"><p className="modal-text">You got it.</p></div></div>}</div>
+    <div className="game-steering-hint"><span>Tap left/right to steer</span><span>•</span><span>Space or arrows on desktop</span></div>
+  </div>
 }
