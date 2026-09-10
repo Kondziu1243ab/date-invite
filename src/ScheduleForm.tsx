@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 
 const PLACES = [
   { value: 'park', label: 'Spacer w parku 🌳' },
-  { value: 'pub', label: 'Pub 🍻' },
-  { value: 'komputer', label: 'Kino plenerowe 🎬 ' },
+  { value: 'pub', label: 'Praga 🏰' },
+  { value: 'komputer', label: 'Kino 🎬 ' },
   { value: 'suprise', label: 'Zaskocz mnie 🤫' },
   { value: 'kawiarnia', label: 'piwko nad wisełką 🍻' },
   { value: 'home', label: 'Netflix and chill 🍿' },
