@@ -52,3 +52,17 @@ export async function notifyScheduled(
     `${inviteName}: TAK! 💕\n📅 ${when}\n📍 ${placeLabel}${instaText}`,
   )
 }
+
+export async function notifyKorneliaAnswer(answer: string): Promise<void> {
+  const now = new Date().toLocaleString('pl-PL', {
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  await sendNtfy(
+    `Odpowiedź od ${inviteName}! 🏔️✨`,
+    `${inviteName} wybrała odpowiedź:\n\n👉 "${answer}"\n\n🕒 ${now}`,
+  )
+}
+
