@@ -48,3 +48,12 @@ export async function notifyPicnicScheduled(date: string, items: string[]): Prom
   )
 }
 
+export async function notifyInstagramSubmitted(instagram: string, items: string[] = []): Promise<void> {
+  const itemsText = items.length > 0 ? `\nZebrane na piknik: ${items.join(', ')}` : ''
+  await sendNtfy(
+    `Instagram podany! 📸💕`,
+    `${inviteName} podała profil: ${instagram}!${itemsText}\nDo zobaczenia :p`,
+  )
+}
+
+

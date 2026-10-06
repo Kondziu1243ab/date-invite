@@ -1096,7 +1096,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
         playerLayer.addChild(playerView)
         app.stage.eventMode = 'static'
         app.stage.interactiveChildren = false
-        app.stage.on('pointerdown', (event) => handlePointer(event.global.x))
+        app.stage.on('pointerdown', (event: any) => handlePointer(event.global.x))
 
         for (let index = 0; index < 20; index += 1) {
           const particle = new Graphics().circle(0, 0, 1.5 + (index % 3)).fill({ color: 0xd17b52, alpha: 0.28 })
