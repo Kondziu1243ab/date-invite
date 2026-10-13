@@ -86,7 +86,7 @@ export default function FleeingButton() {
       onTouchStart={flee}
       aria-label="Let me think — button runs away"
     >
-      Let me think 😉
+      Pomyślę 😉
     </button>
   )
 }

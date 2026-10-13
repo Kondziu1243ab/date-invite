@@ -56,4 +56,12 @@ export async function notifyInstagramSubmitted(instagram: string, items: string[
   )
 }
 
+export async function notifyGameCompleted(result: { pearls: number; triangles: number; difficulty: string }): Promise<void> {
+  await sendNtfy(
+    `Gra z latawcem ukończona! 🪁💕`,
+    `${inviteName} ukończyła wszystkie etapy gry!\nTrudność: ${result.difficulty}\nZebrane trójkąty w pokoju: ${result.triangles}\nZebrane perły: ${result.pearls}\nCzekamy na randkę! :p`,
+  )
+}
+
+
 
