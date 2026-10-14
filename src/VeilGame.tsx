@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Application, Container, Graphics, Rectangle, Sprite, Texture, Assets, type Ticker } from 'pixi.js'
+import WeddingPlannerModal, {
+  type WeddingPlan,
+  type WeddingVenue,
+  type WeddingCrown,
+  MUSIC_DETAILS,
+  DRINK_DETAILS,
+} from './WeddingPlannerModal'
+
+export type { WeddingPlan } from './WeddingPlannerModal'
 
 export type PicnicItemKey =
   | 'grapes'
@@ -17,13 +26,13 @@ export type PicnicItem = {
 }
 
 export const PICNIC_ITEMS: readonly PicnicItem[] = [
-  { id: 'grapes', name: 'Winogrono', emoji: '🍇' },
-  { id: 'lays_orange', name: 'Laysy pomarańczowe', emoji: '🥔' },
-  { id: 'blueberries', name: 'Parę borówek', emoji: '🫐' },
-  { id: 'garage_beer', name: 'Piwo Garage', emoji: '🍺' },
-  { id: 'cookies', name: 'Ciastka', emoji: '🍪' },
-  { id: 'strawberry_cake', name: 'Tort z truskawkami', emoji: '🍰' },
-  { id: 'rose', name: 'Róża', emoji: '🌹' },
+  { id: 'grapes', name: 'Słodki stół - owoce', emoji: '🍇' },
+  { id: 'lays_orange', name: 'Laysy na poprawiny', emoji: '🥔' },
+  { id: 'blueberries', name: 'Świeże borówki', emoji: '🫐' },
+  { id: 'garage_beer', name: 'Garage weselny', emoji: '🍺' },
+  { id: 'cookies', name: 'Ciasteczka weselne', emoji: '🍪' },
+  { id: 'strawberry_cake', name: 'Tort weselny', emoji: '🍰' },
+  { id: 'rose', name: 'Bukiet róż', emoji: '🌹' },
 ] as const
 
 export const PICNIC_ASSETS: Record<PicnicItemKey, string> = {
@@ -40,6 +49,7 @@ export const PICNIC_ASSETS: Record<PicnicItemKey, string> = {
 export type VeilGameResult = {
   pearls: number
   picnicItems: PicnicItemKey[]
+  weddingPlan: WeddingPlan
 }
 
 type EventBanner = {
@@ -97,6 +107,7 @@ type Runtime = {
   difficulty: Difficulty
   springStart: number
   totalDuration: number
+  weddingPlan: WeddingPlan
 }
 
 export type Difficulty = 'easy' | 'medium' | 'hard'
@@ -154,7 +165,7 @@ export const getBiomesForDifficulty = (diff: Difficulty) => {
   return [
     { id: 'autumn' as BiomeId, label: '🍂 Jesienny wiatr', until: Math.round(cfg.springStart * 0.48), event: 'Ciepły podmuch' },
     { id: 'winter' as BiomeId, label: '❄️ Zimowy mróz', until: cfg.springStart, event: 'Śnieżyca' },
-    { id: 'spring' as BiomeId, label: '🧺 Wiosenny piknik', until: cfg.totalDuration, event: 'Radosny powiew' },
+    { id: 'spring' as BiomeId, label: '💒 Sala Weselna', until: cfg.totalDuration, event: 'Złoty walc' },
   ] as const
 }
 
@@ -172,69 +183,87 @@ const createMetrics = (width: number, height: number): Metrics => ({
   unit: Math.max(Math.min(width / 340, height / 520), 0.72),
 })
 
-function drawPlayer(view: Graphics, size: number, isBasket: boolean): void {
+function drawPlayer(view: Graphics, size: number, isBasket: boolean, crownStyle: WeddingCrown = 'crown'): void {
   view.clear()
 
   if (isBasket) {
-    // In Stage 3, the veil transforms into a charming picnic basket!
-    const w = size * 0.44
-    const h = size * 0.32
+    // In Stage 3 (Sala Weselna), the veil transforms into the radiant bridal veil
+    // with customizable crown / headpiece and golden embroidery!
+    view.moveTo(-size * 0.22, -size * 0.28)
+      .quadraticCurveTo(0, -size * 0.38, size * 0.22, -size * 0.28)
+      .bezierCurveTo(size * 0.32, 0, size * 0.52, size * 0.25, size * 0.38, size * 0.6)
+      .quadraticCurveTo(size * 0.28, size * 0.74, size * 0.16, size * 0.62)
+      .quadraticCurveTo(size * 0.05, size * 0.78, -size * 0.05, size * 0.62)
+      .quadraticCurveTo(-size * 0.22, size * 0.75, -size * 0.34, size * 0.58)
+      .bezierCurveTo(-size * 0.5, size * 0.22, -size * 0.28, -0.02, -size * 0.22, -size * 0.28)
+      .closePath()
+      .fill({ color: 0xffffff, alpha: 0.92 })
+      .stroke({ width: (2 * size) / 64, color: 0xffd54f, alpha: 0.95, join: 'round' })
 
-    // Arched woven handle above basket
-    view.moveTo(-w * 0.58, -h * 0.2)
-      .bezierCurveTo(-w * 0.65, -h * 1.5, w * 0.65, -h * 1.5, w * 0.58, -h * 0.2)
-      .stroke({ width: (3.6 * size) / 64, color: 0x795548, cap: 'round' })
-    // Handle inner highlight
-    view.moveTo(-w * 0.5, -h * 0.3)
-      .bezierCurveTo(-w * 0.55, -h * 1.35, w * 0.55, -h * 1.35, w * 0.5, -h * 0.3)
-      .stroke({ width: (1.4 * size) / 64, color: 0xa1887f, cap: 'round' })
-    // Cute pink bow on top of handle
-    view.ellipse(0, -h * 1.25, (5 * size) / 64, (2.6 * size) / 64).fill(0xe91e63)
-    view.circle(0, -h * 1.25, (2.2 * size) / 64).fill(0xff80ab)
+    // Shimmering golden embroidery lines inside the veil
+    view.moveTo(-size * 0.12, -size * 0.2)
+      .bezierCurveTo(-size * 0.25, size * 0.08, -size * 0.18, size * 0.35, -size * 0.18, size * 0.58)
+      .stroke({ width: (1.4 * size) / 64, color: 0xffe082, alpha: 0.85 })
+    view.moveTo(size * 0.1, -size * 0.2)
+      .bezierCurveTo(size * 0.26, size * 0.06, size * 0.2, size * 0.32, size * 0.18, size * 0.58)
+      .stroke({ width: (1.4 * size) / 64, color: 0xffe082, alpha: 0.85 })
 
-    // Red & white cloth lining peaking out
-    view.poly([
-      -w * 0.75, -h * 0.22,
-      -w * 0.45, -h * 0.05,
-      -w * 0.15, -h * 0.28,
-      w * 0.15, -h * 0.05,
-      w * 0.5, -h * 0.26,
-      w * 0.75, -h * 0.18,
-      w * 0.7, 0,
-      -w * 0.7, 0,
-    ], true).fill(0xffcdd2)
+    // Headpiece / Crown style selected in Wedding Planner
+    if (crownStyle === 'wreath') {
+      // Romantic floral bridal wreath with pink roses, white buds and green leaves
+      view.roundRect(-size * 0.22, -size * 0.35, size * 0.44, size * 0.08, size * 0.04)
+        .fill(0x81c784)
+      for (let p = -3; p <= 3; p++) {
+        const px = p * (size * 0.065)
+        if (p % 2 === 0) {
+          view.circle(px, -size * 0.34, (3.2 * size) / 64).fill(0xf48fb1)
+          view.circle(px, -size * 0.34, (1.6 * size) / 64).fill(0xe91e63)
+        } else {
+          view.circle(px, -size * 0.34, (2.6 * size) / 64).fill(0xffffff)
+        }
+      }
+    } else if (crownStyle === 'tiara') {
+      // Sparkling diamond & platinum princess tiara
+      view.poly([
+        -size * 0.17, -size * 0.33,
+        -size * 0.12, -size * 0.46,
+        -size * 0.05, -size * 0.38,
+        0, -size * 0.5,
+        size * 0.05, -size * 0.38,
+        size * 0.12, -size * 0.46,
+        size * 0.17, -size * 0.33,
+      ], true).fill(0xe0f7fa).stroke({ width: (1.3 * size) / 64, color: 0x80deea })
+      view.circle(0, -size * 0.44, (2.8 * size) / 64).fill(0x00e5ff)
+      view.circle(-size * 0.11, -size * 0.4, (2.2 * size) / 64).fill(0xb2ebf2)
+      view.circle(size * 0.11, -size * 0.4, (2.2 * size) / 64).fill(0xb2ebf2)
+      view.roundRect(-size * 0.2, -size * 0.33, size * 0.4, size * 0.06, size * 0.03).fill(0xffffff)
+    } else {
+      // Golden royal tiara/crown on top with jewels
+      view.poly([
+        -size * 0.18, -size * 0.33,
+        -size * 0.14, -size * 0.44,
+        -size * 0.06, -size * 0.37,
+        0, -size * 0.48,
+        size * 0.06, -size * 0.37,
+        size * 0.14, -size * 0.44,
+        size * 0.18, -size * 0.33,
+      ], true).fill(0xffc107).stroke({ width: (1.2 * size) / 64, color: 0xff8f00 })
 
-    // Checkered dots on cloth
-    view.circle(-w * 0.4, -h * 0.12, (2.5 * size) / 64).fill(0xe53935)
-    view.circle(0, -h * 0.14, (2.5 * size) / 64).fill(0xe53935)
-    view.circle(w * 0.4, -h * 0.12, (2.5 * size) / 64).fill(0xe53935)
+      view.circle(0, -size * 0.43, (2.6 * size) / 64).fill(0xe91e63) // Ruby in center
+      view.circle(-size * 0.12, -size * 0.39, (2 * size) / 64).fill(0x00bcd4) // Sapphire left
+      view.circle(size * 0.12, -size * 0.39, (2 * size) / 64).fill(0x00bcd4) // Sapphire right
 
-    // Main basket body (woven wicker tub)
-    view.poly([
-      -w * 0.85, -h * 0.1,
-      w * 0.85, -h * 0.1,
-      w * 0.65, h * 0.85,
-      -w * 0.65, h * 0.85,
-    ], true).fill(0xc48247)
-      .stroke({ width: (2 * size) / 64, color: 0x8d532b, join: 'round' })
-
-    // Horizontal wicker ribs
-    view.roundRect(-w * 0.88, -h * 0.15, w * 1.76, h * 0.18, (3 * size) / 64)
-      .fill(0xb26b34)
-      .stroke({ width: (1.5 * size) / 64, color: 0x79401b })
-    view.roundRect(-w * 0.74, h * 0.32, w * 1.48, h * 0.15, (2 * size) / 64)
-      .fill(0xb26b34)
-      .stroke({ width: (1.2 * size) / 64, color: 0x79401b })
-
-    // Woven cross-diagonal weave lines
-    for (let i = -2; i <= 2; i++) {
-      view.moveTo(i * (w * 0.3) - w * 0.18, 0)
-        .lineTo(i * (w * 0.3) + w * 0.18, h * 0.8)
-        .stroke({ width: (1.3 * size) / 64, color: 0x935223 })
-      view.moveTo(i * (w * 0.3) + w * 0.18, 0)
-        .lineTo(i * (w * 0.3) - w * 0.18, h * 0.8)
-        .stroke({ width: (1.3 * size) / 64, color: 0x935223 })
+      view.roundRect(-size * 0.21, -size * 0.33, size * 0.42, size * 0.07, size * 0.035).fill(0xffecb3)
+      for (let p = -3; p <= 3; p++) {
+        view.circle(p * (size * 0.06), -size * 0.295, (2 * size) / 64).fill(0xffffff)
+      }
     }
+
+    // Intertwined golden wedding rings at center of the veil
+    view.circle(-size * 0.05, size * 0.12, (5 * size) / 64)
+      .stroke({ width: (2 * size) / 64, color: 0xffb300 })
+    view.circle(size * 0.05, size * 0.12, (5 * size) / 64)
+      .stroke({ width: (2 * size) / 64, color: 0xffd54f })
     return
   }
 
@@ -336,22 +365,19 @@ function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
   // Hazard handling
   sprite.visible = false
   if (biome === 'spring') {
-    // Falling twig / branch obstacle ("gałązka")
+    // Flying champagne cork / festive cork with bubbly spray!
     entity.radius = 16 * unit
     const r = entity.radius
-    graphics.moveTo(-r * 0.75, -r * 0.55)
-      .lineTo(-r * 0.2, -r * 0.1)
-      .lineTo(r * 0.75, r * 0.65)
-      .stroke({ width: 3.6 * unit, color: 0x5d4037, cap: 'round', join: 'round' })
-    graphics.moveTo(-r * 0.15, -r * 0.15)
-      .lineTo(r * 0.35, -r * 0.45)
-      .stroke({ width: 2.6 * unit, color: 0x6d4c41, cap: 'round' })
-    graphics.ellipse(r * 0.38, -r * 0.48, 4.2 * unit, 2.2 * unit)
-      .fill(0x7cb342)
-      .stroke({ width: 0.8, color: 0x558b2f })
-    graphics.moveTo(-r * 0.05, 0)
-      .lineTo(r * 0.35, r * 0.35)
-      .stroke({ width: 1.4 * unit, color: 0x8d6e63, cap: 'round' })
+    graphics.roundRect(-r * 0.65, -r * 0.5, r * 1.3, r * 0.95, 3 * unit)
+      .fill(0xc89d7c)
+      .stroke({ width: 1.6 * unit, color: 0x8d5d3e })
+    graphics.ellipse(0, -r * 0.5, r * 0.68, r * 0.26)
+      .fill(0xdfb898)
+      .stroke({ width: 1.4 * unit, color: 0x8d5d3e })
+    graphics.rect(-r * 0.62, -r * 0.1, r * 1.24, 2.5 * unit).fill(0xffd54f)
+    graphics.circle(-r * 0.8, r * 0.7, 3.2 * unit).fill({ color: 0xfff9c4, alpha: 0.85 })
+    graphics.circle(r * 0.85, r * 0.75, 2.5 * unit).fill({ color: 0xfff9c4, alpha: 0.8 })
+    graphics.circle(0, r * 0.95, 2.2 * unit).fill({ color: 0xffffff, alpha: 0.9 })
   } else if (biome === 'winter') {
     entity.radius = 19 * unit
     const r = entity.radius
@@ -366,17 +392,56 @@ function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
   }
 }
 
-function drawBackdrop(view: Graphics, metrics: Metrics, biome: BiomeId): void {
-  const palette =
-    biome === 'autumn'
-      ? [0xfffbf5, 0xfceddc, 0xf6b27f]
-      : biome === 'winter'
-        ? [0xf4fafd, 0xe3f2fd, 0x9ec5e5]
-        : [0xf7fff1, 0xe5f7d5, 0x9fd596]
+function drawBackdrop(view: Graphics, metrics: Metrics, biome: BiomeId, venueStyle: WeddingVenue = 'glamour'): void {
+  let palette: number[]
+  if (biome === 'autumn') {
+    palette = [0xfffbf5, 0xfceddc, 0xf6b27f]
+  } else if (biome === 'winter') {
+    palette = [0xf4fafd, 0xe3f2fd, 0x9ec5e5]
+  } else if (venueStyle === 'rustic') {
+    palette = [0xfdfbf7, 0xf6eee3, 0xdec6a6]
+  } else if (venueStyle === 'garden') {
+    palette = [0xfff9fb, 0xfdeef3, 0xf6c8d7]
+  } else {
+    palette = [0xfffdfa, 0xfdf3eb, 0xfce4d6]
+  }
+
   view.clear()
     .rect(0, 0, metrics.width, metrics.height * 0.48).fill(palette[0])
     .rect(0, metrics.height * 0.48, metrics.width, metrics.height * 0.52).fill(palette[1])
-    .rect(0, metrics.height * 0.82, metrics.width, metrics.height * 0.18).fill({ color: palette[2], alpha: 0.2 })
+    .rect(0, metrics.height * 0.82, metrics.width, metrics.height * 0.18).fill({ color: palette[2], alpha: 0.35 })
+
+  if (biome === 'spring') {
+    if (venueStyle === 'rustic') {
+      // Hanging Edison bulbs on rustic wooden beam
+      view.rect(0, 0, metrics.width, 6).fill(0x5d4037)
+      for (let i = 0; i <= 5; i++) {
+        const lx = (metrics.width / 5) * i
+        view.moveTo(lx, 6).lineTo(lx, 16).stroke({ width: 1.2, color: 0x3e2723 })
+        view.circle(lx, 19, 4.5 * metrics.unit).fill({ color: 0xffa000, alpha: 0.9 })
+        view.circle(lx, 19, 10 * metrics.unit).fill({ color: 0xffe082, alpha: 0.35 })
+      }
+      view.rect(0, metrics.height * 0.82, metrics.width, 2).fill({ color: 0x8d6e63, alpha: 0.6 })
+    } else if (venueStyle === 'garden') {
+      // Floral arch garlands and fairy blossom lights
+      for (let i = 0; i <= 5; i++) {
+        const lx = (metrics.width / 5) * i
+        view.circle(lx, 12, 5 * metrics.unit).fill({ color: 0xf06292, alpha: 0.85 })
+        view.circle(lx, 12, 10 * metrics.unit).fill({ color: 0xf8bbd0, alpha: 0.35 })
+        view.circle(lx + 4, 15, 2.5 * metrics.unit).fill(0x81c784)
+      }
+      view.rect(0, metrics.height * 0.82, metrics.width, 1.8).fill({ color: 0xe91e63, alpha: 0.35 })
+    } else {
+      // Glamour golden chandeliers & sparkling lights
+      for (let i = 0; i <= 5; i++) {
+        const lx = (metrics.width / 5) * i
+        view.circle(lx, 10, 4.8 * metrics.unit).fill({ color: 0xffd54f, alpha: 0.88 })
+        view.circle(lx, 10, 10 * metrics.unit).fill({ color: 0xffecb3, alpha: 0.35 })
+        view.moveTo(lx, 0).lineTo(lx, 8).stroke({ width: 1.2, color: 0xffb300, alpha: 0.7 })
+      }
+      view.rect(0, metrics.height * 0.82, metrics.width, 1.5).fill({ color: 0xe0a96d, alpha: 0.5 })
+    }
+  }
 }
 
 export default function VeilGame({ onComplete }: VeilGameProps) {
@@ -387,10 +452,17 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
     resumeCheckpoint: () => void
     pause: () => void
     steer: (direction: -1 | 1) => void
+    updatePlan: (plan: WeddingPlan) => void
   } | null>(null)
   const onCompleteRef = useRef(onComplete)
   onCompleteRef.current = onComplete
 
+  const [weddingPlan, setWeddingPlan] = useState<WeddingPlan>({
+    venue: 'glamour',
+    crown: 'crown',
+    music: 'waltz',
+    drink: 'champagne',
+  })
   const [gameState, setGameState] = useState<GameState>('ready')
   const [lives, setLives] = useState(3)
   const [pearls, setPearls] = useState(0)
@@ -464,6 +536,12 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       difficulty,
       springStart: DIFFICULTY_CONFIGS[difficulty].springStart,
       totalDuration: DIFFICULTY_CONFIGS[difficulty].totalDuration,
+      weddingPlan: {
+        venue: 'glamour',
+        crown: 'crown',
+        music: 'waltz',
+        drink: 'champagne',
+      },
     }
 
     const applyDifficulty = (nextDifficulty: Difficulty) => {
@@ -566,16 +644,16 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
     }
 
     const updatePlayerGraphic = () => {
-      drawPlayer(playerView, 64 * runtime.metrics.unit, runtime.biome === 'spring')
+      drawPlayer(playerView, 64 * runtime.metrics.unit, runtime.biome === 'spring', runtime.weddingPlan.crown)
     }
 
     const applyBiome = (next: BiomeId, announce: boolean) => {
       runtime.biome = next
       if (announce) message(`${biomeAt(runtime.elapsed, runtime.difficulty).label.replace(/^..\s/, '')}!`, 2000)
-      drawBackdrop(backdrop, runtime.metrics, next)
+      drawBackdrop(backdrop, runtime.metrics, next, runtime.weddingPlan.venue)
       updatePlayerGraphic()
       for (const particle of particles) {
-        particle.tint = next === 'autumn' ? 0xd17b52 : next === 'winter' ? 0xffffff : 0x81c784
+        particle.tint = next === 'autumn' ? 0xd17b52 : next === 'winter' ? 0xffffff : 0xffd54f
       }
     }
 
@@ -599,6 +677,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
         onCompleteRef.current({
           pearls: runtime.pearls,
           picnicItems: [...runtime.collectedPicnicItems],
+          weddingPlan: { ...runtime.weddingPlan },
         })
       }, 900)
     }
@@ -684,7 +763,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       if (runtime.state !== 'checkpoint') return
       runtime.state = 'playing'
       runtime.player.vy = -180 * runtime.metrics.yScale
-      message('Łap jedzonko do koszyka! 🧺', 1400)
+      message(`Wznosimy toast: ${DRINK_DETAILS[runtime.weddingPlan.drink].label}! 🥂✨`, 1600)
       syncHud(true)
     }
 
@@ -702,7 +781,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
         Math.max(y * runtime.metrics.height, 58 * runtime.metrics.yScale),
         runtime.metrics.height - 30 * runtime.metrics.yScale,
       )
-      drawBackdrop(backdrop, runtime.metrics, runtime.biome)
+      drawBackdrop(backdrop, runtime.metrics, runtime.biome, runtime.weddingPlan.venue)
       updatePlayerGraphic()
       app.stage.hitArea = new Rectangle(0, 0, runtime.metrics.width, runtime.metrics.height)
     }
@@ -934,12 +1013,12 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
         return
       }
 
-      // Major Event 3: Spring Strong Wind from Right with Freeze (at ~62s) - 2.8s freeze
+      // Major Event 3: First Dance event in wedding hall
       if (!runtime.springWindTriggered && runtime.elapsed >= 62000 && runtime.elapsed < 76000) {
         runtime.springWindTriggered = true
         runtime.eventBanner = {
-          title: '💨 MOCNY WIATR Z PRAWEJ! 💨',
-          subtitle: 'Wicher spycha w lewo – mocno steruj koszykiem w prawo!',
+          title: `🎶 PIERWSZY TANIEC: ${MUSIC_DETAILS[runtime.weddingPlan.music].label.toUpperCase()}! 🎶`,
+          subtitle: 'Weselne wirowanie na parkiecie – steruj welonem w prawo i leć w rytm muzyki!',
           type: 'wind_right',
         }
         runtime.freezeUntil = runtime.elapsed + 2800
@@ -1062,6 +1141,11 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
         syncHud(true)
       },
       steer,
+      updatePlan: (plan: WeddingPlan) => {
+        runtime.weddingPlan = plan
+        drawBackdrop(backdrop, runtime.metrics, runtime.biome, plan.venue)
+        drawPlayer(playerView, 64 * runtime.metrics.unit, runtime.biome === 'spring', plan.crown)
+      },
     }
 
     const init = async () => {
@@ -1250,11 +1334,11 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
             <div className="game-progress-fill" style={{ width: `${progress}%` }} />
           </div>
           {biome === 'spring' ? (
-            <span className="game-picnic-counter">🧺 {picnicCount}/{PICNIC_ITEMS.length}</span>
+            <span className="game-picnic-counter">💒 {picnicCount}/{PICNIC_ITEMS.length}</span>
           ) : (
             <span className="game-pearl-counter">◌ {pearls}</span>
           )}
-          <span className="game-goal-icon">🧺</span>
+          <span className="game-goal-icon">💒</span>
         </div>
 
         <div className={`game-arena-container ${biome}`}>
@@ -1353,27 +1437,17 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
             </div>
           )}
 
-          {/* Protected Checkpoint overlay: ONLY button click continues, with 400ms delay */}
+          {/* Protected Checkpoint overlay: Interactive Wedding Planner */}
           {gameState === 'checkpoint' && (
-            <div className="game-overlay checkpoint-overlay">
-              <div className="game-modal-card checkpoint-card" onClick={(e) => e.stopPropagation()}>
-                <span className="checkpoint-badge">Checkpoint 🧺</span>
-                <h3 className="modal-heading checkpoint-title">
-                  Ok, wystarczy tej zabawy z welonem skompletujmy nasz piknik, gotowa?
-                </h3>
-                <p className="modal-text">
-                  Życia odnowione! Twój welon zamienia się w koszyk – łap pyszności i omijaj gałązki.
-                </p>
-                <button
-                  type="button"
-                  className="game-primary-btn checkpoint-btn"
-                  disabled={!checkpointReady}
-                  onClick={resumeCheckpoint}
-                >
-                  Lecimy! 🧺
-                </button>
-              </div>
-            </div>
+            <WeddingPlannerModal
+              plan={weddingPlan}
+              onChange={(newPlan) => {
+                setWeddingPlan(newPlan)
+                controlsRef.current?.updatePlan(newPlan)
+              }}
+              onConfirm={resumeCheckpoint}
+              isReady={checkpointReady}
+            />
           )}
 
           {gameState === 'paused' && (
@@ -1394,8 +1468,8 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
                 <h3 className="modal-heading">Koniec lotu!</h3>
                 <p className="modal-text">
                   {hasCheckpoint
-                    ? 'Nie martw się! Możesz wznowić grę od koszyka piknikowego ze świeżymi siłami.'
-                    : 'Złap serduszko po zderzeniu i leć dalej ku wiośnie.'}
+                    ? 'Nie martw się! Możesz wznowić grę od wejścia na salę weselną ze świeżymi siłami.'
+                    : 'Złap serduszko po zderzeniu i leć dalej ku sali weselnej.'}
                 </p>
                 <div className="game-difficulty-selector gameover-difficulty-selector" aria-label="Zmień poziom trudności">
                   <p className="game-difficulty-title">Poziom trudności</p>
@@ -1430,7 +1504,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
                 {hasCheckpoint ? (
                   <div className="modal-actions-column">
                     <button type="button" className="game-primary-btn" onClick={restartFromCheckpoint}>
-                      Zacznij od pikniku 🧺
+                      Zacznij od sali weselnej 💒
                     </button>
                     <button type="button" className="game-subtle-btn" onClick={startGame}>
                       Od samego początku 🍂
@@ -1448,7 +1522,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
           {gameState === 'victory' && (
             <div className="game-overlay">
               <div className="game-modal-card victory-card">
-                <p className="modal-text">Udało się! Koszyk piknikowy spakowany! 🧺✨</p>
+                <p className="modal-text">Udało się! Wszystko gotowe na wesele! 💒🥂✨</p>
               </div>
             </div>
           )}

@@ -1,6 +1,8 @@
 
 
 import { inviteName } from './config'
+import type { WeddingPlan } from './WeddingPlannerModal'
+import { VENUE_DETAILS, CROWN_DETAILS, MUSIC_DETAILS, DRINK_DETAILS } from './WeddingPlannerModal'
 
 async function sendNtfy(title: string, body: string): Promise<void> {
   const topic = import.meta.env.VITE_NTFY_TOPIC?.trim()
@@ -33,26 +35,27 @@ async function sendNtfy(title: string, body: string): Promise<void> {
   }
 }
 
-export async function notifyScheduled(): Promise<void> {
+export async function notifyWeddingDateSelected(date: string): Promise<void> {
   await sendNtfy(
-    `Proposal accepted! 💍💕`,
-    `${inviteName} said YES! 👰‍♀️🤵 Will you marry me? -> YES! 💕`,
+    `Data wesela zaklepana! 💍💒`,
+    `${inviteName} wybrała datę wesela: ${date}! 💕👰‍♀️🤵`,
   )
 }
 
-export async function notifyPicnicScheduled(date: string, items: string[]): Promise<void> {
-  const itemsText = items.length > 0 ? items.join(', ') : 'brak (ale i tak będzie super!)'
+export async function notifyInstagramSubmitted(
+  instagram: string,
+  weddingDate?: string,
+  items: string[] = [],
+  weddingPlan?: WeddingPlan,
+): Promise<void> {
+  const dateText = weddingDate ? `\nData wesela: ${weddingDate}` : ''
+  const planText = weddingPlan
+    ? `\nPlan wesela:\n- Sala: ${VENUE_DETAILS[weddingPlan.venue].emoji} ${VENUE_DETAILS[weddingPlan.venue].label}\n- Welon: ${CROWN_DETAILS[weddingPlan.crown].emoji} ${CROWN_DETAILS[weddingPlan.crown].label}\n- Pierwszy taniec: ${MUSIC_DETAILS[weddingPlan.music].emoji} ${MUSIC_DETAILS[weddingPlan.music].label}\n- Toast: ${DRINK_DETAILS[weddingPlan.drink].emoji} ${DRINK_DETAILS[weddingPlan.drink].label}`
+    : ''
+  const itemsText = items.length > 0 ? `\nZebrane na sali weselnej: ${items.join(', ')}` : ''
   await sendNtfy(
-    `Randka na piknik potwierdzona! 🧺💕`,
-    `${inviteName} wybrała datę: ${date}!\nZebrane na piknik: ${itemsText}\nDo zobaczenia :p`,
-  )
-}
-
-export async function notifyInstagramSubmitted(instagram: string, items: string[] = []): Promise<void> {
-  const itemsText = items.length > 0 ? `\nZebrane na piknik: ${items.join(', ')}` : ''
-  await sendNtfy(
-    `Instagram podany! 📸💕`,
-    `${inviteName} podała profil: ${instagram}!${itemsText}\nDo zobaczenia :p`,
+    `Instagram podany na wesele! 📸💒`,
+    `${inviteName} podała profil: ${instagram}!${dateText}${planText}${itemsText}\nDo zobaczenia na weselu i na insta! 💕`,
   )
 }
 

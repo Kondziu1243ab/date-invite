@@ -1,145 +1,64 @@
-import { useState, useEffect } from 'react'
-
-const PLACES = [
-  { value: 'park', label: 'Statki w parku 🌳' },
-  { value: 'pub', label: 'Pub 🍻' },
-  { value: 'kinoplener', label: 'Kino plenerowe 🎬 ' },
-  { value: 'suprise', label: 'Zaskocz mnie 🤫' },
-  { value: 'wiselka', label: 'Piwko nad wisełką 🍻' },
-  { value: 'film', label: 'Netlix & chill 🍿' },
-] as const
+import { useState } from 'react'
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
 type ScheduleFormProps = {
-  onScheduled: (date: string, placeLabel: string) => void
-  isFoccaciaMode: boolean
-  setIsFoccaciaMode: (val: boolean) => void
+  onScheduled: (date: string) => void
+  isSending?: boolean
 }
 
 export default function ScheduleForm({
   onScheduled,
-  isFoccaciaMode: _isFoccaciaMode,
-  // setIsFoccaciaMode,
+  isSending = false,
 }: ScheduleFormProps) {
   const [date, setDate] = useState('')
-  const [place, _setPlace] = useState('')
   const [error, setError] = useState('')
-  const [isOpen, setIsOpen] = useState(false)
-  // const [animatingOption, setAnimatingOption] = useState<string | null>(null)
 
-  // Close custom dropdown when clicking outside
-  useEffect(() => {
-    if (!isOpen) return
-    const handleOutsideClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (!target.closest('.custom-select-container')) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('click', handleOutsideClick)
-    return () => document.removeEventListener('click', handleOutsideClick)
-  }, [isOpen])
-
-  function handleSubmit() {
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
     if (!date) {
-      setError('Wybierz datę randki.')
+      setError('Wybierz datę wesela!')
       return
     }
-
-    const label = PLACES.find((p) => p.value === place)?.label ?? place
-    onScheduled(date, label)
+    setError('')
+    onScheduled(date)
   }
-
-  /*
-  function handleOptionSelect(value: string) {
-    // Normal selection behavior
-    setPlace(value)
-    setIsOpen(false)
-
-    /* Focaccia mode commented out:
-    if (isFoccaciaMode || animatingOption) return
-
-    setAnimatingOption(value)
-    setIsFoccaciaMode(true)
-
-    // Play transition for 1200ms, then swap to locked foccacia state
-    setTimeout(() => {
-      setPlace('foccacia')
-      setAnimatingOption(null)
-      setIsOpen(false)
-    }, 1200)
-    * /
-  }
-  */
 
   return (
-    <div className="schedule-form">
-      <label className="form-field">
-        <input
-          type="date"
-          className="form-input"
-          min={todayIso()}
-          value={date}
-          onChange={(e) => {
-            setDate(e.target.value)
-            setError('')
-          }}
-        />
-      </label>
+    <div className="schedule-form wedding-date-step">
+      <p className="invite-text text-center wedding-date-title">
+        To kiedy wesele? 💒💍
+      </p>
 
-      {/* Opcja wyboru miejsca zakomentowana:
-      <label className="form-field">
-        <span className="form-label">Gdzie?</span>
-        <div className="custom-select-container">
-          <div
-            className={`custom-select-trigger ${isFoccaciaMode ? 'locked' : ''} ${isOpen ? 'open' : ''}`}
-            onClick={() => {
-              if (!isFoccaciaMode) {
-                setIsOpen(!isOpen)
-                setError('')
-              }
+      <form onSubmit={handleSubmit} className="wedding-date-form">
+        <label className="form-field">
+          <input
+            type="date"
+            className="form-input wedding-date-input"
+            min={todayIso()}
+            value={date}
+            onChange={(e) => {
+              setDate(e.target.value)
+              setError('')
             }}
-          >
-            <span>
-              {place
-                ? PLACES.find((p) => p.value === place)?.label
-                : 'Wybierz miejsce…'}
-            </span>
-            <span className="arrow">{isFoccaciaMode ? '🔒' : '▼'}</span>
-          </div>
+            disabled={isSending}
+            autoFocus
+          />
+        </label>
 
-          {isOpen && (
-            <ul className="custom-select-options">
-              {PLACES.map((p) => {
-                let optionClass = 'custom-select-option'
-                return (
-                  <li
-                    key={p.value}
-                    className={optionClass}
-                    onClick={() => handleOptionSelect(p.value)}
-                  >
-                    {p.label}
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      </label>
-      */}
+        {error ? <p className="form-error">{error}</p> : null}
 
-      {error ? <p className="form-error">{error}</p> : null}
-
-      <button
-        type="button"
-        className="btn btn-umow"
-        onClick={handleSubmit}
-      >
-        Umówieni 
-      </button>
+        <button
+          type="submit"
+          className="btn btn-tak btn-wedding-date"
+          disabled={!date || isSending}
+        >
+          {isSending ? 'Zapisywanie terminu... 💕' : 'Zatwierdź i lecimy dalej 💕'}
+        </button>
+      </form>
     </div>
   )
 }
+
