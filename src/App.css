@@ -2215,5 +2215,558 @@
   padding: 0.7rem 1.8rem;
 }
 
+/* Audio & top actions */
+.game-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.game-audio-btn {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.game-audio-btn:hover {
+  transform: scale(1.1);
+  background: #ffffff;
+}
+
+/* Letters Shelf */
+.game-letters-shelf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #f0e6e6;
+  border-radius: 12px;
+  margin-bottom: 6px;
+  min-height: 32px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.letters-shelf-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #757575;
+  white-space: nowrap;
+}
+
+.letters-shelf-chips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.shelf-empty-hint {
+  font-size: 0.72rem;
+  color: #9e9e9e;
+  font-style: italic;
+}
+
+.letter-shelf-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #f06292 0%, #ad1457 100%);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(173, 20, 87, 0.3);
+  animation: chip-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes chip-pop {
+  0% { transform: scale(0.3); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.game-letter-counter {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #ad1457;
+  white-space: nowrap;
+}
+
+/* Cemetery Gate Checkpoint */
+.cemetery-gate-overlay {
+  background: rgba(10, 12, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+
+.cemetery-cinematic-card {
+  background: linear-gradient(180deg, #161224 0%, #0d0b16 100%);
+  border: 2px solid #4a3b68;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 30px rgba(106, 27, 154, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 1.5rem;
+  border-radius: 20px;
+  width: min(92vw, 380px);
+}
+
+.cemetery-badge {
+  background: #2a1f42;
+  color: #ce93d8;
+  border: 1px solid #7b1fa2;
+}
+
+.cemetery-title {
+  color: #e1bee7 !important;
+}
+
+.cemetery-welcome-title {
+  color: #f48fb1 !important;
+}
+
+.cemetery-gate-stage {
+  position: relative;
+  width: 180px;
+  height: 160px;
+  perspective: 900px;
+  margin: 6px 0;
+}
+
+.cemetery-mist-interior {
+  position: absolute;
+  inset: 6px;
+  border-radius: 14px 14px 0 0;
+  background: radial-gradient(ellipse at center, #311b92 0%, #1a0933 60%, #0a0414 100%);
+  opacity: 0.35;
+  transition: opacity 0.8s ease, box-shadow 0.8s ease;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cemetery-mist-interior.active {
+  opacity: 1;
+  box-shadow: 0 0 45px rgba(156, 39, 176, 0.7), inset 0 0 25px rgba(0, 229, 255, 0.4);
+}
+
+.cemetery-full-moon-mini {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e8eaf6;
+  box-shadow: 0 0 16px rgba(232, 234, 246, 0.8);
+}
+
+.mist-fog-cloud {
+  position: absolute;
+  width: 140%;
+  height: 60px;
+  bottom: 0;
+  background: radial-gradient(ellipse at center, rgba(179, 157, 219, 0.35) 0%, transparent 70%);
+  animation: mist-drift 6s infinite alternate ease-in-out;
+}
+
+.mist-fog-cloud.fog-2 {
+  bottom: 20px;
+  animation-duration: 8s;
+  animation-delay: -3s;
+  opacity: 0.5;
+}
+
+@keyframes mist-drift {
+  0% { transform: translateX(-15%); }
+  100% { transform: translateX(15%); }
+}
+
+.flying-bats-swarm .fbs {
+  position: absolute;
+  font-size: 1rem;
+  animation: bat-flutter 2s infinite ease-in-out alternate;
+}
+
+.fbs.b1 { top: 30%; left: 20%; animation-delay: 0.1s; }
+.fbs.b2 { top: 45%; right: 25%; animation-delay: 0.7s; }
+.fbs.b3 { top: 20%; right: 15%; animation-delay: 1.2s; }
+
+@keyframes bat-flutter {
+  0% { transform: translateY(0) scale(0.9); }
+  100% { transform: translateY(-12px) scale(1.15); }
+}
+
+.flying-player-bat {
+  font-size: 2.4rem;
+  position: relative;
+  z-index: 5;
+  animation: bat-fly-in 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  filter: drop-shadow(0 0 12px rgba(186, 104, 200, 0.9));
+}
+
+@keyframes bat-fly-in {
+  0% { transform: translateY(50px) scale(0.3); opacity: 0; }
+  100% { transform: translateY(0) scale(1.15); opacity: 1; }
+}
+
+.cemetery-gate-frame {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow: visible;
+}
+
+.gate-pillar {
+  width: 14px;
+  height: 100%;
+  background: linear-gradient(180deg, #37474f 0%, #212121 100%);
+  border: 1px solid #546e7a;
+  position: relative;
+  z-index: 3;
+}
+
+.pillar-spire {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 12px solid #78909c;
+}
+
+.cemetery-gate-wing {
+  flex: 1;
+  height: 100%;
+  background: rgba(18, 16, 28, 0.92);
+  border: 2px solid #5c4878;
+  position: relative;
+  transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.gate-left-wing {
+  transform-origin: left center;
+}
+
+.gate-right-wing {
+  transform-origin: right center;
+}
+
+.gate-left-wing.opened {
+  transform: rotateY(-115deg);
+}
+
+.gate-right-wing.opened {
+  transform: rotateY(115deg);
+}
+
+.iron-bars {
+  position: absolute;
+  inset: 6px;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 10px,
+    #4a3b68 10px,
+    #4a3b68 14px
+  );
+  border: 1px solid #7b1fa2;
+}
+
+.iron-cross-crest {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  border: 2px solid #ba68c8;
+  border-radius: 50%;
+  background: #2a1f42;
+}
+
+.cemetery-action-btn {
+  margin-top: 4px;
+  background: linear-gradient(135deg, #7b1fa2 0%, #ab47bc 100%);
+  box-shadow: 0 4px 14px rgba(123, 31, 162, 0.5);
+}
+
+.cemetery-action-btn:hover {
+  box-shadow: 0 6px 18px rgba(123, 31, 162, 0.65);
+}
+
+.cemetery-enter-btn {
+  animation: pulse-button 1.5s infinite ease-in-out;
+}
+
+/* Scythe Ending & Phrase Reveal */
+.scythe-ending-overlay {
+  background: rgba(8, 6, 14, 0.94);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.scythe-cinematic-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.scythe-koniec-title {
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: #f3e5f5;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 20px rgba(186, 104, 200, 0.95), 0 0 40px rgba(142, 36, 170, 0.8);
+  animation: koniec-title-glow 2.4s ease-in-out forwards;
+}
+
+@keyframes koniec-title-glow {
+  0% { opacity: 0; transform: scale(0.8); }
+  20% { opacity: 1; transform: scale(1.05); }
+  75% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.2; transform: scale(0.95); }
+}
+
+.scythe-slash-fx {
+  position: relative;
+  width: 250px;
+  height: 250px;
+  animation: scythe-slash-anim 2.4s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+}
+
+.scythe-blade-visual {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 35px rgba(186, 104, 200, 0.85));
+}
+
+.scythe-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.scythe-slash-line {
+  position: absolute;
+  top: 25%;
+  left: -20%;
+  width: 140%;
+  height: 5px;
+  background: linear-gradient(90deg, transparent, #ffffff, #00e5ff, transparent);
+  box-shadow: 0 0 25px #ffffff, 0 0 45px #00e5ff;
+  transform: rotate(-35deg);
+  animation: slash-trail 2.4s ease-out forwards;
+}
+
+@keyframes scythe-slash-anim {
+  0% { transform: scale(0.9) rotate(-45deg) translate(30px, -30px); opacity: 0; }
+  25% { transform: scale(1.15) rotate(-25deg) translate(15px, -15px); opacity: 1; }
+  55% { transform: scale(1.35) rotate(20deg) translate(-25px, 25px); opacity: 1; }
+  85% { transform: scale(1.4) rotate(45deg) translate(-60px, 60px); opacity: 0.8; }
+  100% { transform: scale(1.45) rotate(60deg) translate(-100px, 100px); opacity: 0; }
+}
+
+@keyframes slash-trail {
+  0% { opacity: 0; transform: rotate(-35deg) scaleX(0.1); }
+  45% { opacity: 0; transform: rotate(-35deg) scaleX(0.2); }
+  55% { opacity: 1; transform: rotate(-35deg) scaleX(1.3); }
+  85% { opacity: 0.8; transform: rotate(-35deg) scaleX(1.4); }
+  100% { opacity: 0; transform: rotate(-35deg) scaleX(1.6); }
+}
+
+/* Revealed Phrase Card */
+.phrase-reveal-card {
+  width: min(94vw, 420px);
+  padding: 1.8rem 1.4rem;
+  background: linear-gradient(180deg, #1b162b 0%, #100d1c 100%);
+  border: 2px solid #5c4878;
+  border-radius: 20px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 40px rgba(186, 104, 200, 0.35);
+  text-align: center;
+  animation: reveal-card-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes reveal-card-in {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.twoj-wynik-title {
+  margin: 0 0 1.2rem;
+  font-size: 1.55rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+}
+
+.phrase-reveal-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 18px;
+}
+
+.phrase-word {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.phrase-word-gap {
+  height: 2px;
+}
+
+.letter-slot {
+  position: relative;
+  width: 38px;
+  height: 50px;
+  background: rgba(30, 24, 46, 0.8);
+  border: 1px solid #4a3b68;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.slot-letter {
+  font-size: 1.35rem;
+  font-weight: 900;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  transition: transform 0.22s ease-in-out, box-shadow 0.22s ease-in-out;
+  animation: letter-drop-bounce 0.55s cubic-bezier(0.2, 0.8, 0.3, 1.2) forwards;
+}
+
+@keyframes letter-drop-bounce {
+  0% { transform: translateY(-45px) scale(0.85); opacity: 0; }
+  70% { transform: translateY(4px) scale(1.08); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Collected letter - vibrant, pink & glowing */
+.letter-collected {
+  background: linear-gradient(135deg, #f06292 0%, #ad1457 100%);
+  color: #ffffff;
+  border: 2px solid #ff80ab;
+  box-shadow: 0 4px 14px rgba(233, 30, 99, 0.55);
+}
+
+/* Strictly grayed-out uncollected letter - stays gray to the end */
+.letter-grayout {
+  background: #2b2b34 !important;
+  color: #888894 !important;
+  border: 2px solid #4a4a56 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  opacity: 0.9;
+}
+
+/* Active swapping animation hop */
+.slot-letter.is-swapping {
+  transform: translateY(-10px) scale(1.18);
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.9), 0 0 35px rgba(233, 30, 99, 0.7);
+  z-index: 10;
+}
+
+.phrase-complete-footer {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: footer-fade-in 0.6s ease-out;
+}
+
+@keyframes footer-fade-in {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.btn-kontynuujmy {
+  background: linear-gradient(135deg, #e91e63 0%, #ff4081 100%);
+  color: #fff;
+  font-size: 1.05rem;
+  padding: 0.75rem 2.2rem;
+  box-shadow: 0 6px 20px rgba(233, 30, 99, 0.55);
+  animation: pulse-button 1.6s infinite ease-in-out;
+}
+
+.final-secret-badge {
+  background: #fce4ec;
+  border: 1px solid #f48fb1;
+  border-radius: 12px;
+  padding: 8px 16px;
+  margin: 8px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1.05rem;
+  color: #ad1457;
+}
+
+.final-secret-badge strong {
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+/* Test skip button */
+.test-skip-container {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.btn-test-skip {
+  background: rgba(240, 235, 227, 0.85);
+  color: #6d4c41;
+  border: 1.5px dashed #bcaaa4;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-test-skip:hover {
+  background: #efebe9;
+  border-color: #8d6e63;
+  color: #3e2723;
+  transform: scale(1.04);
+}
+
 
 

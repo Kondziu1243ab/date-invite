@@ -83,7 +83,7 @@ export default function InstagramForm({ onComplete }: InstagramFormProps) {
   return (
     <div className="instagram-step">
       <p className="invite-text text-center">
-        Teraz tylko podaj mi swojego insta
+        Teraz tylko poproszeę o twojego instagrama
       </p>
 
       {/* Animation Stage */}

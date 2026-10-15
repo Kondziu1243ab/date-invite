@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Application, Container, Graphics, Rectangle, Sprite, type Ticker } from 'pixi.js'
+import { Application, Container, Graphics, Rectangle, Sprite, Text, type Ticker } from 'pixi.js'
+import {
+  startCemeteryMusic,
+  stopCemeteryMusic,
+  playScytheSlash,
+  playLetterChime,
+  playBatFlap,
+  getSoundMuted,
+  toggleSoundMuted,
+} from './soundEffects'
 
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
@@ -7,7 +16,7 @@ export type DifficultyConfig = {
   label: string
   emoji: string
   description: string
-  roomStart: number
+  cemeteryStart: number
   totalDuration: number
   hazardIntervalMultiplier: number
   eventWindMultiplier: number
@@ -20,7 +29,7 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     label: 'Łatwy',
     emoji: '🌸',
     description: 'Klasyczna gra: brak obrażeń od ścian, łagodniejszy wiatr.',
-    roomStart: 44_000,
+    cemeteryStart: 44_000,
     totalDuration: 86_000,
     hazardIntervalMultiplier: 1.0,
     eventWindMultiplier: 1.0,
@@ -31,7 +40,7 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     label: 'Średni',
     emoji: '⚡',
     description: 'Ściany boczne ranią! Nieco dłuższe i silniejsze zjawiska pogodowe, ciut więcej przeszkód.',
-    roomStart: 48_000,
+    cemeteryStart: 48_000,
     totalDuration: 94_000,
     hazardIntervalMultiplier: 0.82,
     eventWindMultiplier: 1.25,
@@ -42,7 +51,7 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     label: 'Trudny',
     emoji: '🔥',
     description: 'Prawdziwe wyzwanie! Raniące ściany, potężne wichury, gęste przeszkody i dłuższy lot.',
-    roomStart: 54_000,
+    cemeteryStart: 54_000,
     totalDuration: 106_000,
     hazardIntervalMultiplier: 0.68,
     eventWindMultiplier: 1.55,
@@ -51,14 +60,14 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
   },
 }
 
-export type BiomeId = 'spring' | 'winter' | 'room'
+export type BiomeId = 'spring' | 'winter' | 'cemetery'
 
 export const getBiomesForDifficulty = (diff: Difficulty) => {
   const cfg = DIFFICULTY_CONFIGS[diff]
   return [
-    { id: 'spring' as BiomeId, label: '🌸 Wiosenny wiatr', until: Math.round(cfg.roomStart * 0.48), event: 'Wiosenny podmuch' },
-    { id: 'winter' as BiomeId, label: '❄️ Zimowy mróz', until: cfg.roomStart, event: 'Śnieżyca' },
-    { id: 'room' as BiomeId, label: '🍷 Czerwony pokój', until: cfg.totalDuration, event: 'Zamęt w pokoju' },
+    { id: 'spring' as BiomeId, label: '🌸 Wiosenny wiatr', until: Math.round(cfg.cemeteryStart * 0.48), event: 'Wiosenny podmuch' },
+    { id: 'winter' as BiomeId, label: '❄️ Zimowy mróz', until: cfg.cemeteryStart, event: 'Śnieżyca' },
+    { id: 'cemetery' as BiomeId, label: '🪦 Ponury cmentarz', until: cfg.totalDuration, event: 'Cmentarna mgła' },
   ] as const
 }
 
@@ -67,9 +76,52 @@ const biomeAt = (elapsed: number, diff: Difficulty) => {
   return biomes.find((biome) => elapsed < biome.until) ?? biomes[biomes.length - 1]
 }
 
+export type SecretLetter = {
+  id: number
+  char: string
+  wordIndex: number // 0 for JESTEŚ, 1 for SŁODKA
+  charIndex: number
+}
+
+export const SECRET_LETTERS: SecretLetter[] = [
+  // JESTEŚ (word 0, slots 0..5)
+  { id: 0, char: 'J', wordIndex: 0, charIndex: 0 },
+  { id: 1, char: 'E', wordIndex: 0, charIndex: 1 },
+  { id: 2, char: 'S', wordIndex: 0, charIndex: 2 },
+  { id: 3, char: 'T', wordIndex: 0, charIndex: 3 },
+  { id: 4, char: 'E', wordIndex: 0, charIndex: 4 },
+  { id: 5, char: 'Ś', wordIndex: 0, charIndex: 5 },
+  // SŁODKA (word 1, slots 6..11)
+  { id: 6, char: 'S', wordIndex: 1, charIndex: 0 },
+  { id: 7, char: 'Ł', wordIndex: 1, charIndex: 1 },
+  { id: 8, char: 'O', wordIndex: 1, charIndex: 2 },
+  { id: 9, char: 'D', wordIndex: 1, charIndex: 3 },
+  { id: 10, char: 'K', wordIndex: 1, charIndex: 4 },
+  { id: 11, char: 'A', wordIndex: 1, charIndex: 5 },
+]
+
+// Scrambled sequence across the 3 stages:
+// Stage 1 (Spring): K, E, D, S
+// Stage 2 (Winter): A, Ł, T, Ś
+// Stage 3 (Cemetery): J, O, S, E
+export const SPAWN_LETTER_ORDER: number[] = [
+  10, // K
+  1,  // E
+  9,  // D
+  6,  // S
+  11, // A
+  7,  // Ł
+  3,  // T
+  5,  // Ś
+  0,  // J
+  8,  // O
+  2,  // S
+  4,  // E
+]
+
 export type VeilGameResult = {
-  pearls: number
-  triangles: number
+  lettersCollected: number
+  totalLetters: number
   difficulty: Difficulty
   difficultyLabel: string
 }
@@ -77,21 +129,27 @@ export type VeilGameResult = {
 type EventBanner = {
   title: string
   subtitle: string
-  type: 'gust' | 'storm' | 'room_chaos'
+  type: 'gust' | 'storm' | 'cemetery_fog'
 }
 
-type VeilGameProps = { onComplete: (result: VeilGameResult) => void }
-type GameState = 'ready' | 'playing' | 'checkpoint' | 'paused' | 'gameover' | 'victory'
-type EntityKind = 'hazard' | 'pearl' | 'triangle' | 'heart'
-type HazardType = 'twig' | 'icicle' | 'chair' | 'wine_glass' | 'rose'
+type VeilGameProps = {
+  onComplete: (result: VeilGameResult) => void
+  skipToEndTest?: boolean
+}
+
+type GameState = 'ready' | 'playing' | 'checkpoint' | 'paused' | 'gameover' | 'ending'
+type EntityKind = 'hazard' | 'letter' | 'heart'
+type HazardType = 'twig' | 'icicle' | 'tombstone' | 'ghost_wisp' | 'raven'
 type Metrics = { width: number; height: number; xScale: number; yScale: number; unit: number }
 
 type Entity = {
   view: Container
   graphics: Graphics
   sprite: Sprite
+  text: Text
   kind: EntityKind
   hazardType?: HazardType
+  letterData?: SecretLetter
   x: number
   y: number
   vx: number
@@ -105,14 +163,12 @@ type Runtime = {
   state: GameState
   elapsed: number
   lives: number
-  pearls: number
-  triangles: number
   biome: BiomeId
   player: { x: number; y: number; vx: number; vy: number; invulnerableUntil: number }
   metrics: Metrics
   nextHazardAt: number
-  nextPearlAt: number
-  nextTriangleAt: number
+  nextLetterAt: number
+  spawnedLetterIndex: number
   nextHeartAt: number
   eventEndsAt: number
   eventWind: number
@@ -121,17 +177,32 @@ type Runtime = {
   messageEndsAt: number
   lastHudAt: number
   hasReachedCheckpoint: boolean
-  roomStageStarted: boolean
+  cemeteryStageStarted: boolean
   freezeUntil: number
   eventBanner: EventBanner | null
   postFreezeAction: (() => void) | null
   springEventTriggered: boolean
   winterEventTriggered: boolean
-  roomEventTriggered: boolean
+  cemeteryEventTriggered: boolean
   difficulty: Difficulty
-  roomStart: number
+  cemeteryStart: number
   totalDuration: number
+  collectedLetters: SecretLetter[]
 }
+
+export type EndingTile = {
+  id: number
+  char: string
+  isCollected: boolean
+}
+
+type EndingPhase =
+  | 'none'
+  | 'scythe'
+  | 'dropped_collected'
+  | 'dropped_grayout'
+  | 'swapping'
+  | 'solved'
 
 const createMetrics = (width: number, height: number): Metrics => ({
   width,
@@ -145,13 +216,13 @@ function drawKite(view: Graphics, size: number): void {
   view.clear()
   const s = size * 0.72
 
-  // Tail ribbon string (graceful waving curves)
+  // Tail ribbon string
   view.moveTo(0, s * 0.52)
     .bezierCurveTo(-s * 0.28, s * 0.82, s * 0.28, s * 1.08, 0, s * 1.38)
     .bezierCurveTo(-s * 0.24, s * 1.64, s * 0.24, s * 1.88, 0, s * 2.15)
     .stroke({ width: (2.2 * size) / 64, color: 0xff80ab, cap: 'round' })
 
-  // Ribbon bows on the tail (kokardki)
+  // Ribbon bows on the tail
   const bowPoints = [
     { x: -s * 0.05, y: s * 0.88, color: 0xff4081 },
     { x: s * 0.1, y: s * 1.32, color: 0xffd54f },
@@ -174,26 +245,22 @@ function drawKite(view: Graphics, size: number): void {
   const center = { x: 0, y: -s * 0.06 }
 
   // 4 colorful quadrants
-  // Top-left: vibrant coral rose
   view.poly([top.x, top.y, center.x, center.y, left.x, left.y], true).fill(0xff4081)
-  // Top-right: sunny gold
   view.poly([top.x, top.y, right.x, right.y, center.x, center.y], true).fill(0xffd54f)
-  // Bottom-left: bright sky cyan
   view.poly([left.x, left.y, center.x, center.y, bottom.x, bottom.y], true).fill(0x00e5ff)
-  // Bottom-right: deep magenta pink
   view.poly([center.x, center.y, right.x, right.y, bottom.x, bottom.y], true).fill(0xf50057)
 
   // Outer kite border
   view.poly([top.x, top.y, right.x, right.y, bottom.x, bottom.y, left.x, left.y], true)
     .stroke({ width: (2.4 * size) / 64, color: 0xffffff, alpha: 0.95, join: 'round' })
 
-  // Wooden frame struts (spine & cross spar)
+  // Wooden frame struts
   view.moveTo(top.x, top.y).lineTo(bottom.x, bottom.y)
     .stroke({ width: (2.2 * size) / 64, color: 0x5d4037, cap: 'round' })
   view.moveTo(left.x, left.y).lineTo(right.x, right.y)
     .stroke({ width: (2.2 * size) / 64, color: 0x5d4037, cap: 'round' })
 
-  // Center knot / ring
+  // Center knot
   view.circle(center.x, center.y, (3.4 * size) / 64).fill(0xffffff)
     .circle(center.x, center.y, (1.8 * size) / 64).fill(0xe91e63)
 
@@ -201,55 +268,146 @@ function drawKite(view: Graphics, size: number): void {
   view.circle(top.x, top.y + s * 0.12, (2.6 * size) / 64).fill({ color: 0xffffff, alpha: 0.65 })
 }
 
+function drawBat(view: Graphics, size: number, flapPhase = 0): void {
+  view.clear()
+  const s = size * 0.72
+  const wingFlap = Math.sin(flapPhase) * 0.38
+
+  // Left wing tip & joint
+  const lwTipX = -s * 1.35
+  const lwTipY = -s * 0.15 + wingFlap * s * 0.8
+  const lwJointX = -s * 0.68
+  const lwJointY = -s * 0.55 + wingFlap * s * 0.35
+  const lwBaseY = s * 0.32
+
+  // Left wing membrane
+  view.poly([
+    0, -s * 0.15,
+    lwJointX, lwJointY,
+    lwTipX, lwTipY,
+    -s * 1.05, lwTipY + s * 0.35,
+    -s * 0.72, lwTipY + s * 0.22,
+    -s * 0.42, lwBaseY,
+    0, s * 0.28,
+  ], true).fill(0x231a34)
+    .stroke({ width: 1.8, color: 0x5a4178, join: 'round' })
+
+  // Left wing struts
+  view.moveTo(0, -s * 0.15).lineTo(lwJointX, lwJointY).lineTo(lwTipX, lwTipY)
+    .stroke({ width: 2.2, color: 0x3d2b59, cap: 'round' })
+  view.moveTo(lwJointX, lwJointY).lineTo(-s * 1.05, lwTipY + s * 0.35)
+    .stroke({ width: 1.4, color: 0x3d2b59 })
+  view.moveTo(lwJointX, lwJointY).lineTo(-s * 0.72, lwTipY + s * 0.22)
+    .stroke({ width: 1.4, color: 0x3d2b59 })
+
+  // Right wing tip & joint
+  const rwTipX = s * 1.35
+  const rwTipY = -s * 0.15 + wingFlap * s * 0.8
+  const rwJointX = s * 0.68
+  const rwJointY = -s * 0.55 + wingFlap * s * 0.35
+  const rwBaseY = s * 0.32
+
+  // Right wing membrane
+  view.poly([
+    0, -s * 0.15,
+    rwJointX, rwJointY,
+    rwTipX, rwTipY,
+    s * 1.05, rwTipY + s * 0.35,
+    s * 0.72, rwTipY + s * 0.22,
+    s * 0.42, rwBaseY,
+    0, s * 0.28,
+  ], true).fill(0x231a34)
+    .stroke({ width: 1.8, color: 0x5a4178, join: 'round' })
+
+  // Right wing struts
+  view.moveTo(0, -s * 0.15).lineTo(rwJointX, rwJointY).lineTo(rwTipX, rwTipY)
+    .stroke({ width: 2.2, color: 0x3d2b59, cap: 'round' })
+  view.moveTo(rwJointX, rwJointY).lineTo(s * 1.05, rwTipY + s * 0.35)
+    .stroke({ width: 1.4, color: 0x3d2b59 })
+  view.moveTo(rwJointX, rwJointY).lineTo(s * 0.72, rwTipY + s * 0.22)
+    .stroke({ width: 1.4, color: 0x3d2b59 })
+
+  // Bat body
+  view.ellipse(0, 0, s * 0.36, s * 0.48).fill(0x191124)
+    .stroke({ width: 1.8, color: 0x483262 })
+  view.ellipse(0, s * 0.08, s * 0.22, s * 0.28).fill({ color: 0x322248, alpha: 0.85 })
+
+  // Bat head
+  view.circle(0, -s * 0.36, s * 0.3).fill(0x191124)
+
+  // Pointy ears
+  view.poly([-s * 0.26, -s * 0.36, -s * 0.36, -s * 0.78, -s * 0.1, -s * 0.54], true).fill(0x191124)
+  view.poly([-s * 0.23, -s * 0.4, -s * 0.32, -s * 0.72, -s * 0.12, -s * 0.54], true).fill(0x8e24aa)
+
+  view.poly([s * 0.26, -s * 0.36, s * 0.36, -s * 0.78, s * 0.1, -s * 0.54], true).fill(0x191124)
+  view.poly([s * 0.23, -s * 0.4, s * 0.32, -s * 0.72, s * 0.12, -s * 0.54], true).fill(0x8e24aa)
+
+  // Glowing eyes
+  view.circle(-s * 0.12, -s * 0.38, s * 0.075).fill(0xff1744)
+    .circle(-s * 0.1, -s * 0.4, s * 0.03).fill(0xffffff)
+  view.circle(s * 0.12, -s * 0.38, s * 0.075).fill(0xff1744)
+    .circle(s * 0.14, -s * 0.4, s * 0.03).fill(0xffffff)
+
+  // Fangs
+  view.poly([-s * 0.07, -s * 0.26, -s * 0.05, -s * 0.18, -s * 0.02, -s * 0.26], true).fill(0xffffff)
+  view.poly([s * 0.02, -s * 0.26, s * 0.05, -s * 0.18, s * 0.07, -s * 0.26], true).fill(0xffffff)
+}
+
 function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
-  const { graphics, sprite } = entity
+  const { graphics, sprite, text } = entity
   graphics.clear()
   sprite.visible = false
 
-  if (entity.kind === 'pearl') {
-    entity.radius = 11 * unit
+  if (entity.kind === 'letter') {
+    entity.radius = 16 * unit
     const r = entity.radius
-    if (biome === 'winter') {
-      // Ice crystal pearl
-      graphics.circle(0, 0, r).fill(0xf0faff)
-        .circle(r * 0.25, r * 0.25, r * 0.65).fill({ color: 0x81d4fa, alpha: 0.55 })
-        .circle(-r * 0.32, -r * 0.32, r * 0.24).fill(0xffffff)
-        .circle(0, 0, r).stroke({ width: 1.4, color: 0x4fc3f7, alpha: 0.85 })
+
+    if (biome === 'cemetery') {
+      graphics.circle(0, 0, r * 1.35).fill({ color: 0xba68c8, alpha: 0.28 })
+      graphics.poly([
+        0, -r,
+        r * 0.88, -r * 0.5,
+        r * 0.88, r * 0.5,
+        0, r,
+        -r * 0.88, r * 0.5,
+        -r * 0.88, -r * 0.5,
+      ], true).fill(0x4a148c).stroke({ width: 2.2 * unit, color: 0xce93d8, join: 'round' })
+      graphics.circle(0, 0, r * 0.45).fill({ color: 0xab47bc, alpha: 0.5 })
+    } else if (biome === 'winter') {
+      graphics.circle(0, 0, r * 1.35).fill({ color: 0x4fc3f7, alpha: 0.28 })
+      graphics.poly([
+        0, -r,
+        r * 0.88, -r * 0.5,
+        r * 0.88, r * 0.5,
+        0, r,
+        -r * 0.88, r * 0.5,
+        -r * 0.88, -r * 0.5,
+      ], true).fill(0x0277bd).stroke({ width: 2.2 * unit, color: 0x81d4fa, join: 'round' })
+      graphics.circle(0, 0, r * 0.45).fill({ color: 0x29b6f6, alpha: 0.5 })
     } else {
-      // Spring floral dew pearl
-      graphics.circle(0, 0, r).fill(0xfff9f1)
-        .circle(r * 0.27, r * 0.27, r * 0.68).fill({ color: 0xf4bad5, alpha: 0.5 })
-        .circle(-r * 0.32, -r * 0.32, r * 0.22).fill(0xffffff)
-        .circle(0, 0, r).stroke({ width: 1.4, color: 0xe5a4c1, alpha: 0.85 })
+      graphics.circle(0, 0, r * 1.35).fill({ color: 0xf06292, alpha: 0.28 })
+      graphics.poly([
+        0, -r,
+        r * 0.88, -r * 0.5,
+        r * 0.88, r * 0.5,
+        0, r,
+        -r * 0.88, r * 0.5,
+        -r * 0.88, -r * 0.5,
+      ], true).fill(0xad1457).stroke({ width: 2.2 * unit, color: 0xf48fb1, join: 'round' })
+      graphics.circle(0, 0, r * 0.45).fill({ color: 0xec407a, alpha: 0.5 })
+    }
+
+    if (entity.letterData) {
+      text.text = entity.letterData.char
+      text.style.fontSize = Math.round(17 * unit)
+      text.visible = true
+    } else {
+      text.visible = false
     }
     return
   }
 
-  if (entity.kind === 'triangle') {
-    // Collectible ruby & gold triangle in Red Room
-    entity.radius = 14 * unit
-    const r = entity.radius
-    const p1 = { x: 0, y: -r * 1.15 }
-    const p2 = { x: r * 1.02, y: r * 0.65 }
-    const p3 = { x: -r * 1.02, y: r * 0.65 }
-
-    // Outer warm aura
-    graphics.poly([p1.x * 1.3, p1.y * 1.3, p2.x * 1.3, p2.y * 1.3, p3.x * 1.3, p3.y * 1.3], true)
-      .fill({ color: 0xff1744, alpha: 0.22 })
-
-    // Ruby triangle body
-    graphics.poly([p1.x, p1.y, p2.x, p2.y, p3.x, p3.y], true)
-      .fill(0xff1744)
-      .stroke({ width: 2.2 * unit, color: 0xffd54f, join: 'round' })
-
-    // Inner bright peach facet
-    graphics.poly([p1.x * 0.55, p1.y * 0.55, p2.x * 0.55, p2.y * 0.55, p3.x * 0.55, p3.y * 0.55], true)
-      .fill(0xff8a80)
-
-    // Center sparkling gem
-    graphics.circle(0, 0, r * 0.24).fill(0xffffff)
-    return
-  }
+  text.visible = false
 
   if (entity.kind === 'heart') {
     entity.radius = 15 * unit
@@ -261,80 +419,54 @@ function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
     return
   }
 
-  // Hazard kinds:
-  if (biome === 'room') {
-    const hazard = entity.hazardType || 'wine_glass'
+  if (biome === 'cemetery') {
+    const hazard = entity.hazardType || 'tombstone'
 
-    if (hazard === 'chair') {
-      entity.radius = 21 * unit
+    if (hazard === 'tombstone') {
+      entity.radius = 20 * unit
       const r = entity.radius
-      // Wooden chair top rail
-      graphics.roundRect(-r * 0.65, -r * 0.9, r * 1.3, r * 0.22, 2 * unit).fill(0x5d4037)
-      // Vertical back slats
-      for (let i = -2; i <= 2; i++) {
-        graphics.rect(i * (r * 0.23) - r * 0.04, -r * 0.68, r * 0.08, r * 0.68).fill(0x795548)
-      }
-      // Luxurious red velvet cushion
-      graphics.roundRect(-r * 0.8, 0, r * 1.6, r * 0.35, 4 * unit).fill(0xb71c1c)
-        .stroke({ width: 1.2, color: 0xff5252, alpha: 0.8 })
-      // Legs
-      graphics.rect(-r * 0.7, r * 0.35, r * 0.12, r * 0.65).fill(0x4e342e)
-      graphics.rect(r * 0.58, r * 0.35, r * 0.12, r * 0.65).fill(0x4e342e)
-      // Leg rungs
-      graphics.rect(-r * 0.65, r * 0.68, r * 1.3, r * 0.08).fill(0x5d4037)
+      graphics.ellipse(0, r * 0.85, r * 0.9, r * 0.22).fill(0x181818)
+      graphics.moveTo(-r * 0.65, r * 0.85)
+        .lineTo(-r * 0.65, -r * 0.3)
+        .bezierCurveTo(-r * 0.65, -r * 0.95, r * 0.65, -r * 0.95, r * 0.65, -r * 0.3)
+        .lineTo(r * 0.65, r * 0.85)
+        .closePath()
+        .fill(0x3e3e44)
+        .stroke({ width: 1.8 * unit, color: 0x6e6e76 })
+      graphics.rect(-2.2 * unit, -r * 0.65, 4.4 * unit, r * 0.75).fill(0x1e1e24)
+      graphics.rect(-r * 0.3, -r * 0.45, r * 0.6, 4.4 * unit).fill(0x1e1e24)
+      graphics.ellipse(-r * 0.4, r * 0.65, r * 0.18, r * 0.12).fill(0x2e7d32)
       return
     }
 
-    if (hazard === 'rose') {
+    if (hazard === 'ghost_wisp') {
       entity.radius = 18 * unit
       const r = entity.radius
-      // Stem with thorn
-      graphics.moveTo(0, 0).bezierCurveTo(-r * 0.2, r * 0.4, r * 0.2, r * 0.7, 0, r * 0.9)
-        .stroke({ width: 2.4 * unit, color: 0x2e7d32, cap: 'round' })
-      graphics.ellipse(-r * 0.35, r * 0.45, r * 0.28, r * 0.12).fill(0x43a047)
-      // Rose petal clusters
-      graphics.circle(-r * 0.3, -r * 0.2, r * 0.38).fill(0xc2185b)
-      graphics.circle(r * 0.3, -r * 0.2, r * 0.38).fill(0xc2185b)
-      graphics.circle(0, -r * 0.35, r * 0.42).fill(0xd81b60)
-      graphics.circle(0, -r * 0.1, r * 0.45).fill(0xe91e63)
-      graphics.ellipse(0, -r * 0.15, r * 0.3, r * 0.25).fill(0x880e4f)
-      graphics.arc(0, -r * 0.15, r * 0.18, 0, Math.PI * 1.5).stroke({ width: 1.5, color: 0xff4081 })
+      graphics.circle(0, 0, r * 1.3).fill({ color: 0x00e5ff, alpha: 0.2 })
+      graphics.moveTo(0, -r)
+        .bezierCurveTo(r * 0.9, -r * 0.3, r * 0.8, r * 0.6, 0, r)
+        .bezierCurveTo(-r * 0.8, r * 0.6, -r * 0.9, -r * 0.3, 0, -r)
+        .fill(0x00bcd4)
+        .stroke({ width: 1.5 * unit, color: 0xe0f7fa })
+      graphics.circle(0, -r * 0.15, r * 0.4).fill(0xffffff)
+      graphics.circle(-r * 0.2, -r * 0.2, r * 0.12).fill(0x006064)
+      graphics.circle(r * 0.2, -r * 0.2, r * 0.12).fill(0x006064)
       return
     }
 
-    // Default room hazard: 'wine_glass'
-    entity.radius = 18 * unit
+    entity.radius = 19 * unit
     const r = entity.radius
-    // Glass goblet outline
-    graphics.poly([
-      -r * 0.65, -r * 0.75,
-      r * 0.65, -r * 0.75,
-      r * 0.5, r * 0.1,
-      0, r * 0.45,
-      -r * 0.5, r * 0.1,
-    ], true).fill({ color: 0xffffff, alpha: 0.18 })
-      .stroke({ width: 1.5, color: 0xffcdd2, alpha: 0.85 })
-
-    // Wine liquid
-    graphics.poly([
-      -r * 0.52, -r * 0.25,
-      r * 0.52, -r * 0.25,
-      r * 0.44, r * 0.08,
-      0, r * 0.38,
-      -r * 0.44, r * 0.08,
-    ], true).fill(0x880e4f)
-    graphics.ellipse(0, -r * 0.25, r * 0.52, r * 0.12).fill(0xb71c1c)
-
-    // Stem & base
-    graphics.rect(-1.2 * unit, r * 0.45, 2.4 * unit, r * 0.45).fill(0xffcdd2)
-    graphics.ellipse(0, r * 0.9, r * 0.55, r * 0.12).fill({ color: 0xffffff, alpha: 0.4 })
-      .stroke({ width: 1.2, color: 0xffcdd2, alpha: 0.8 })
-    graphics.moveTo(-r * 0.4, -r * 0.6).lineTo(-r * 0.25, 0).stroke({ width: 1.2, color: 0xffffff, alpha: 0.75 })
+    graphics.ellipse(0, 0, r * 0.4, r * 0.65).fill(0x121216)
+    graphics.poly([0, -r * 0.2, -r * 1.15, -r * 0.55, -r * 0.8, r * 0.25, 0, r * 0.3], true)
+      .fill(0x21212a).stroke({ width: 1.4, color: 0x424252 })
+    graphics.poly([0, -r * 0.2, r * 1.15, -r * 0.55, r * 0.8, r * 0.25, 0, r * 0.3], true)
+      .fill(0x21212a).stroke({ width: 1.4, color: 0x424252 })
+    graphics.poly([0, -r * 0.6, r * 0.45, -r * 0.65, 0, -r * 0.45], true).fill(0xffb300)
+    graphics.circle(r * 0.08, -r * 0.55, 2.2 * unit).fill(0xff1744)
     return
   }
 
   if (biome === 'winter') {
-    // Sharp frosty icicle
     entity.radius = 19 * unit
     const r = entity.radius
     graphics.poly([-r, -r * 0.65, r, -r * 0.65, r * 0.55, r, -r * 0.7, r], true).fill(0xc7e8f3)
@@ -343,7 +475,6 @@ function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
     return
   }
 
-  // Spring twig / branch obstacle
   entity.radius = 16 * unit
   const r = entity.radius
   graphics.moveTo(-r * 0.75, -r * 0.55)
@@ -363,15 +494,39 @@ function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
 
 function drawBackdrop(view: Graphics, metrics: Metrics, biome: BiomeId): void {
   view.clear()
-  if (biome === 'room') {
-    // Luxurious warm crimson / red room with ambient candlelight glow
-    view.rect(0, 0, metrics.width, metrics.height * 0.52).fill(0x2d0b11)
-    view.rect(0, metrics.height * 0.52, metrics.width, metrics.height * 0.48).fill(0x420f18)
-    // Warm romantic center ambient lantern glow
-    view.circle(metrics.width * 0.5, metrics.height * 0.36, metrics.width * 0.42).fill({ color: 0x881b24, alpha: 0.35 })
-    view.circle(metrics.width * 0.5, metrics.height * 0.36, metrics.width * 0.24).fill({ color: 0xba2d38, alpha: 0.25 })
-    // Dark mahogany baseboard / floor trim
-    view.rect(0, metrics.height * 0.86, metrics.width, metrics.height * 0.14).fill(0x180508)
+  if (biome === 'cemetery') {
+    view.rect(0, 0, metrics.width, metrics.height * 0.65).fill(0x0a0c1a)
+    view.rect(0, metrics.height * 0.65, metrics.width, metrics.height * 0.35).fill(0x141224)
+
+    const moonX = metrics.width * 0.8
+    const moonY = metrics.height * 0.22
+    const moonR = 26 * metrics.unit
+    view.circle(moonX, moonY, moonR * 2.2).fill({ color: 0x9fa8da, alpha: 0.12 })
+    view.circle(moonX, moonY, moonR * 1.5).fill({ color: 0xc5cae9, alpha: 0.22 })
+    view.circle(moonX, moonY, moonR).fill(0xe8eaf6)
+    view.circle(moonX - moonR * 0.2, moonY - moonR * 0.25, moonR * 0.25).fill({ color: 0xb0bec5, alpha: 0.35 })
+    view.circle(moonX + moonR * 0.35, moonY + moonR * 0.1, moonR * 0.18).fill({ color: 0xb0bec5, alpha: 0.3 })
+
+    view.poly([
+      0, metrics.height * 0.72,
+      metrics.width * 0.3, metrics.height * 0.68,
+      metrics.width * 0.65, metrics.height * 0.74,
+      metrics.width, metrics.height * 0.7,
+      metrics.width, metrics.height,
+      0, metrics.height,
+    ], true).fill(0x0d0d18)
+
+    const tx = metrics.width * 0.25
+    const ty = metrics.height * 0.69
+    view.rect(tx - 2, ty - 18, 4, 18).fill(0x080810)
+    view.rect(tx - 8, ty - 14, 16, 3.5).fill(0x080810)
+
+    const tx2 = metrics.width * 0.68
+    const ty2 = metrics.height * 0.73
+    view.rect(tx2 - 2, ty2 - 14, 4, 14).fill(0x080810)
+    view.rect(tx2 - 6, ty2 - 11, 12, 3).fill(0x080810)
+
+    view.rect(0, metrics.height * 0.86, metrics.width, metrics.height * 0.14).fill(0x070710)
     return
   }
 
@@ -385,7 +540,7 @@ function drawBackdrop(view: Graphics, metrics: Metrics, biome: BiomeId): void {
     .rect(0, metrics.height * 0.82, metrics.width, metrics.height * 0.18).fill({ color: palette[2], alpha: 0.2 })
 }
 
-export default function VeilGame({ onComplete }: VeilGameProps) {
+export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const controlsRef = useRef<{
     start: () => void
@@ -399,10 +554,9 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
 
   const [gameState, setGameState] = useState<GameState>('ready')
   const [lives, setLives] = useState(3)
-  const [pearls, setPearls] = useState(0)
-  const [triangles, setTriangles] = useState(0)
+  const [collectedLetters, setCollectedLetters] = useState<SecretLetter[]>([])
   const [hasCheckpoint, setHasCheckpoint] = useState(false)
-  const [doorsOpen, setDoorsOpen] = useState(false)
+  const [gatesOpen, setGatesOpen] = useState(false)
   const [enterReady, setEnterReady] = useState(false)
   const [biome, setBiome] = useState<BiomeId>('spring')
   const [progress, setProgress] = useState(0)
@@ -411,10 +565,21 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
   const [error, setError] = useState(false)
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')
   const difficultyRef = useRef<Difficulty>('easy')
+  const [soundMuted, setSoundMuted] = useState(getSoundMuted())
+
+  // Ending Cutscene States
+  const [endingPhase, setEndingPhase] = useState<EndingPhase>('none')
+  const [endingTiles, setEndingTiles] = useState<EndingTile[]>([])
+  const [activeSwappingIds, setActiveSwappingIds] = useState<number[]>([])
 
   const selectDifficulty = useCallback((nextDifficulty: Difficulty) => {
     difficultyRef.current = nextDifficulty
     setDifficulty(nextDifficulty)
+  }, [])
+
+  const handleToggleSound = useCallback(() => {
+    const next = toggleSoundMuted()
+    setSoundMuted(next)
   }, [])
 
   const startGame = useCallback(() => controlsRef.current?.start(), [])
@@ -422,21 +587,126 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
   const resumeCheckpoint = useCallback(() => controlsRef.current?.resumeCheckpoint(), [])
   const togglePause = useCallback(() => controlsRef.current?.pause(), [])
 
-  const handleOpenDoors = useCallback(() => {
-    setDoorsOpen(true)
+  const handleOpenGates = useCallback(() => {
+    setGatesOpen(true)
     setTimeout(() => {
       setEnterReady(true)
     }, 650)
   }, [])
+
+  // Start the choreographed ending sequence
+  const startEndingChoreography = useCallback((collected: SecretLetter[]) => {
+    stopCemeteryMusic()
+    setGameState('ending')
+    setEndingPhase('scythe')
+    playScytheSlash()
+
+    // Build the initial 12 slots:
+    // First: collected letters in the order collected
+    // Next: uncollected letters as grayout
+    const collectedIds = new Set(collected.map((c) => c.id))
+    const initialTiles: EndingTile[] = [
+      ...collected.map((c) => ({ id: c.id, char: c.char, isCollected: true })),
+      ...SECRET_LETTERS.filter((l) => !collectedIds.has(l.id)).map((l) => ({
+        id: l.id,
+        char: l.char,
+        isCollected: false,
+      })),
+    ]
+    setEndingTiles(initialTiles)
+
+    // Step 1: Scythe swings for 2.4s while "Koniec upiorności" is displayed
+    setTimeout(() => {
+      // Step 2: Show "Twój wynik" and drop collected letters into the first slots
+      setEndingPhase('dropped_collected')
+      playLetterChime(1)
+
+      // Step 3: After 1.4s, drop the grayed-out letters into the remaining slots
+      setTimeout(() => {
+        setEndingPhase('dropped_grayout')
+        playLetterChime(4)
+
+        // Step 4: After another 1.4s, start swapping letters until "JESTEŚ SŁODKA" is formed
+        setTimeout(() => {
+          setEndingPhase('swapping')
+        }, 1400)
+      }, 1400)
+    }, 2400)
+  }, [])
+
+  // Swap animation ticker: step by step swaps elements until sorted
+  useEffect(() => {
+    if (endingPhase !== 'swapping') return
+
+    let current = [...endingTiles]
+    let stepCount = 0
+
+    const interval = window.setInterval(() => {
+      // Find first out-of-order element
+      let firstMisplaced = -1
+      for (let i = 0; i < current.length; i++) {
+        if (current[i].id !== i) {
+          firstMisplaced = i
+          break
+        }
+      }
+
+      if (firstMisplaced === -1) {
+        // All elements are in place!
+        clearInterval(interval)
+        setActiveSwappingIds([])
+        setEndingPhase('solved')
+        playLetterChime(11)
+        return
+      }
+
+      // Find where element with id `firstMisplaced` currently is
+      const targetId = firstMisplaced
+      const currentPos = current.findIndex((t) => t.id === targetId)
+
+      if (currentPos !== -1) {
+        // Swap items at firstMisplaced and currentPos
+        const next = [...current]
+        const temp = next[firstMisplaced]
+        next[firstMisplaced] = next[currentPos]
+        next[currentPos] = temp
+        current = next
+        setEndingTiles(next)
+
+        setActiveSwappingIds([next[firstMisplaced].id, next[currentPos].id])
+        playLetterChime(stepCount)
+        stepCount += 1
+
+        setTimeout(() => {
+          setActiveSwappingIds([])
+        }, 220)
+      }
+    }, 500)
+
+    return () => clearInterval(interval)
+  }, [endingPhase])
+
+  // If test skip was requested from the invite screen
+  useEffect(() => {
+    if (skipToEndTest) {
+      // Pick exactly 6 letters (half of the 12) from SPAWN_LETTER_ORDER
+      const halfIds = SPAWN_LETTER_ORDER.slice(0, 6)
+      const halfLetters = halfIds
+        .map((id) => SECRET_LETTERS.find((l) => l.id === id)!)
+        .filter(Boolean)
+      setCollectedLetters(halfLetters)
+      startEndingChoreography(halfLetters)
+    }
+  }, [skipToEndTest, startEndingChoreography])
 
   useEffect(() => {
     const host = hostRef.current
     if (!host) return
     let disposed = false
     let app: Application | null = null
-    let finishTimer: number | null = null
     let resizeObserver: ResizeObserver | null = null
     let tickerUpdate: ((ticker: Ticker) => void) | null = null
+    let flapPhase = 0
 
     const playerView = new Graphics()
     const backdrop = new Graphics()
@@ -452,14 +722,12 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       state: 'ready',
       elapsed: 0,
       lives: 3,
-      pearls: 0,
-      triangles: 0,
       biome: 'spring',
       player: { x: 170, y: 110, vx: 0, vy: 0, invulnerableUntil: 0 },
       metrics: createMetrics(Math.max(host.clientWidth, 1), Math.max(host.clientHeight, 1)),
       nextHazardAt: 1200,
-      nextPearlAt: 2400,
-      nextTriangleAt: Infinity,
+      nextLetterAt: 3200,
+      spawnedLetterIndex: 0,
       nextHeartAt: Infinity,
       eventEndsAt: 0,
       eventWind: 0,
@@ -468,22 +736,23 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       messageEndsAt: 0,
       lastHudAt: 0,
       hasReachedCheckpoint: false,
-      roomStageStarted: false,
+      cemeteryStageStarted: false,
       freezeUntil: 0,
       eventBanner: null,
       postFreezeAction: null,
       springEventTriggered: false,
       winterEventTriggered: false,
-      roomEventTriggered: false,
+      cemeteryEventTriggered: false,
       difficulty,
-      roomStart: DIFFICULTY_CONFIGS[difficulty].roomStart,
+      cemeteryStart: DIFFICULTY_CONFIGS[difficulty].cemeteryStart,
       totalDuration: DIFFICULTY_CONFIGS[difficulty].totalDuration,
+      collectedLetters: [],
     }
 
     const applyDifficulty = (nextDifficulty: Difficulty) => {
       const config = DIFFICULTY_CONFIGS[nextDifficulty]
       runtime.difficulty = nextDifficulty
-      runtime.roomStart = config.roomStart
+      runtime.cemeteryStart = config.cemeteryStart
       runtime.totalDuration = config.totalDuration
     }
 
@@ -491,8 +760,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       if (!force && runtime.elapsed - runtime.lastHudAt < 120) return
       runtime.lastHudAt = runtime.elapsed
       setLives(runtime.lives)
-      setPearls(runtime.pearls)
-      setTriangles(runtime.triangles)
+      setCollectedLetters([...runtime.collectedLetters])
       setHasCheckpoint(runtime.hasReachedCheckpoint)
       setBiome(runtime.biome)
       setProgress(Math.min(100, Math.floor((runtime.elapsed / runtime.totalDuration) * 100)))
@@ -504,6 +772,8 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
     const recycle = (entity: Entity) => {
       entity.active = false
       entity.view.visible = false
+      entity.text.visible = false
+      entity.letterData = undefined
       entityPool.push(entity)
     }
 
@@ -517,11 +787,22 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
         const container = new Container()
         const graphics = new Graphics()
         const sprite = new Sprite()
-        container.addChild(graphics, sprite)
+        const text = new Text({
+          text: '',
+          style: {
+            fontFamily: 'Outfit, system-ui, sans-serif',
+            fontSize: 16,
+            fontWeight: 'bold',
+            fill: 0xffffff,
+          },
+        })
+        text.anchor.set(0.5)
+        container.addChild(graphics, sprite, text)
         entity = {
           view: container,
           graphics,
           sprite,
+          text,
           kind,
           x: 0,
           y: 0,
@@ -534,6 +815,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       }
       entity.kind = kind
       entity.hazardType = undefined
+      entity.letterData = undefined
       entity.active = true
       entity.view.visible = true
       entity.view.rotation = 0
@@ -551,16 +833,22 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       entity.y = -42 * m.yScale
       entity.vx = (Math.random() - 0.5) * 30 * m.xScale
       entity.vy = (kind === 'hazard' ? 150 : 125) * m.yScale
-      entity.spin = (Math.random() - 0.5) * (kind === 'hazard' ? 1.4 : 2.4)
+      entity.spin = (Math.random() - 0.5) * (kind === 'hazard' ? 1.4 : 1.2)
 
       if (kind === 'hazard') {
-        if (runtime.biome === 'room') {
-          const roomHazards: HazardType[] = ['chair', 'wine_glass', 'rose']
-          entity.hazardType = roomHazards[Math.floor(Math.random() * roomHazards.length)]
+        if (runtime.biome === 'cemetery') {
+          const cemeteryHazards: HazardType[] = ['tombstone', 'ghost_wisp', 'raven']
+          entity.hazardType = cemeteryHazards[Math.floor(Math.random() * cemeteryHazards.length)]
         } else if (runtime.biome === 'winter') {
           entity.hazardType = 'icicle'
         } else {
           entity.hazardType = 'twig'
+        }
+      } else if (kind === 'letter') {
+        if (runtime.spawnedLetterIndex < SPAWN_LETTER_ORDER.length) {
+          const letterId = SPAWN_LETTER_ORDER[runtime.spawnedLetterIndex]
+          entity.letterData = SECRET_LETTERS.find((l) => l.id === letterId)
+          runtime.spawnedLetterIndex += 1
         }
       }
 
@@ -574,7 +862,11 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
     }
 
     const updatePlayerGraphic = () => {
-      drawKite(playerView, 64 * runtime.metrics.unit)
+      if (runtime.biome === 'cemetery') {
+        drawBat(playerView, 58 * runtime.metrics.unit, flapPhase)
+      } else {
+        drawKite(playerView, 64 * runtime.metrics.unit)
+      }
     }
 
     const applyBiome = (next: BiomeId, announce: boolean) => {
@@ -584,7 +876,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       updatePlayerGraphic()
       for (const particle of particles) {
         particle.tint =
-          next === 'spring' ? 0x81c784 : next === 'winter' ? 0xffffff : 0xff1744
+          next === 'spring' ? 0x81c784 : next === 'winter' ? 0xffffff : 0xab47bc
       }
     }
 
@@ -595,41 +887,38 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       runtime.player.vy = -210 * runtime.metrics.yScale
       runtime.nextHeartAt = runtime.lives > 0 ? runtime.elapsed + 4500 : Infinity
       message('Uważaj! ♥', 950)
-      if (runtime.lives <= 0) runtime.state = 'gameover'
+      if (runtime.lives <= 0) {
+        runtime.state = 'gameover'
+        stopCemeteryMusic()
+      }
       syncHud(true)
     }
 
     const finish = () => {
       if (runtime.state !== 'playing') return
-      runtime.state = 'victory'
+      runtime.state = 'ending'
       runtime.message = null
       syncHud(true)
-      finishTimer = window.setTimeout(() => {
-        onCompleteRef.current({
-          pearls: runtime.pearls,
-          triangles: runtime.triangles,
-          difficulty: runtime.difficulty,
-          difficultyLabel: DIFFICULTY_CONFIGS[runtime.difficulty].label,
-        })
-      }, 900)
+      startEndingChoreography([...runtime.collectedLetters])
     }
 
     const reset = () => {
       applyDifficulty(difficultyRef.current)
       recycleAll()
-      setDoorsOpen(false)
+      stopCemeteryMusic()
+      setGatesOpen(false)
       setEnterReady(false)
+      setEndingPhase('none')
       runtime.state = 'playing'
       runtime.elapsed = 0
       runtime.lives = 3
-      runtime.pearls = 0
-      runtime.triangles = 0
       runtime.biome = 'spring'
       runtime.hasReachedCheckpoint = false
-      runtime.roomStageStarted = false
+      runtime.cemeteryStageStarted = false
+      runtime.collectedLetters = []
+      runtime.spawnedLetterIndex = 0
       runtime.nextHazardAt = 1200
-      runtime.nextPearlAt = 2400
-      runtime.nextTriangleAt = Infinity
+      runtime.nextLetterAt = 3000
       runtime.nextHeartAt = Infinity
       runtime.eventEndsAt = 0
       runtime.eventWind = 0
@@ -639,7 +928,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       runtime.postFreezeAction = null
       runtime.springEventTriggered = false
       runtime.winterEventTriggered = false
-      runtime.roomEventTriggered = false
+      runtime.cemeteryEventTriggered = false
       runtime.message = 'Wiosenny wiatr 🌸'
       runtime.messageEndsAt = 1300
       runtime.player = {
@@ -656,17 +945,17 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
     const resetToCheckpoint = () => {
       applyDifficulty(difficultyRef.current)
       recycleAll()
-      setDoorsOpen(true)
+      setGatesOpen(true)
       setEnterReady(true)
+      setEndingPhase('none')
       runtime.state = 'playing'
-      runtime.elapsed = runtime.roomStart
+      runtime.elapsed = runtime.cemeteryStart
       runtime.lives = 3
-      runtime.biome = 'room'
+      runtime.biome = 'cemetery'
       runtime.hasReachedCheckpoint = true
-      runtime.roomStageStarted = true
-      runtime.nextPearlAt = Infinity
-      runtime.nextTriangleAt = runtime.roomStart + 1600
-      runtime.nextHazardAt = runtime.roomStart + 1400
+      runtime.cemeteryStageStarted = true
+      runtime.nextLetterAt = runtime.cemeteryStart + 1600
+      runtime.nextHazardAt = runtime.cemeteryStart + 1400
       runtime.nextHeartAt = Infinity
       runtime.eventEndsAt = 0
       runtime.eventWind = 0
@@ -674,17 +963,18 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       runtime.freezeUntil = 0
       runtime.eventBanner = null
       runtime.postFreezeAction = null
-      runtime.roomEventTriggered = false
+      runtime.cemeteryEventTriggered = false
 
       runtime.player = {
         x: runtime.metrics.width / 2,
         y: runtime.metrics.height * 0.32,
         vx: 0,
         vy: -90 * runtime.metrics.yScale,
-        invulnerableUntil: runtime.roomStart + 800,
+        invulnerableUntil: runtime.cemeteryStart + 800,
       }
-      applyBiome('room', false)
-      message('Łap spadające trójkąty! 🔺', 1500)
+      applyBiome('cemetery', false)
+      startCemeteryMusic()
+      message('Mroczny Cmentarz! 🪦', 1500)
       syncHud(true)
     }
 
@@ -692,7 +982,8 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       if (runtime.state !== 'checkpoint') return
       runtime.state = 'playing'
       runtime.player.vy = -180 * runtime.metrics.yScale
-      message('Witaj w Czerwonym Pokoju! 🍷🔺', 1500)
+      startCemeteryMusic()
+      message('Cmentarz wita nowego gościa... 🪦🦇', 1500)
       syncHud(true)
     }
 
@@ -719,7 +1010,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       const m = runtime.metrics
       const player = runtime.player
       const seconds = delta / 1000
-      const gravity = runtime.biome === 'winter' ? 1.12 : 0.94
+      const gravity = runtime.biome === 'winter' ? 1.12 : runtime.biome === 'cemetery' ? 0.98 : 0.94
       const damping = runtime.biome === 'winter' ? 0.975 : 0.958
       player.vy += (760 * gravity * m.yScale + runtime.eventLift) * seconds
       player.vx += (Math.sin(runtime.elapsed / 750) * 28 * m.xScale + runtime.eventWind) * seconds
@@ -775,13 +1066,13 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
           entity.radius + 24 * runtime.metrics.unit
         ) {
           if (entity.kind === 'hazard') damage()
-          if (entity.kind === 'pearl') {
-            runtime.pearls += 1
-            message('+1 Perła! ✨', 700)
-          }
-          if (entity.kind === 'triangle') {
-            runtime.triangles += 1
-            message('+1 Trójkąt! 🔺✨', 800)
+          if (entity.kind === 'letter' && entity.letterData) {
+            const letter = entity.letterData
+            if (!runtime.collectedLetters.some((l) => l.id === letter.id)) {
+              runtime.collectedLetters.push(letter)
+              playLetterChime(runtime.collectedLetters.length)
+              message(`+ Litera '${letter.char}'! ✨`, 800)
+            }
           }
           if (entity.kind === 'heart' && runtime.lives < 3) {
             runtime.lives += 1
@@ -813,6 +1104,11 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       if (runtime.state !== 'playing') return
       const delta = Math.min(ticker.deltaMS, 34)
 
+      flapPhase += (delta / 1000) * 8.5
+      if (runtime.biome === 'cemetery') {
+        drawBat(playerView, 58 * runtime.metrics.unit, flapPhase)
+      }
+
       // Freeze handler for alert banners
       if (runtime.freezeUntil > runtime.elapsed) {
         runtime.elapsed += delta
@@ -832,24 +1128,23 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
 
       runtime.elapsed += delta
 
-      // Checkpoint trigger: Reaching the Red Room (stage 3) with door opening animation!
-      if (runtime.elapsed >= runtime.roomStart && !runtime.roomStageStarted) {
-        runtime.elapsed = runtime.roomStart
-        runtime.roomStageStarted = true
+      // Checkpoint trigger: Reaching Cemetery (stage 3) with Gothic Gate opening animation!
+      if (runtime.elapsed >= runtime.cemeteryStart && !runtime.cemeteryStageStarted) {
+        runtime.elapsed = runtime.cemeteryStart
+        runtime.cemeteryStageStarted = true
         runtime.hasReachedCheckpoint = true
         runtime.state = 'checkpoint'
         runtime.lives = 3
-        runtime.nextPearlAt = Infinity
-        runtime.nextTriangleAt = runtime.roomStart + 1800
-        runtime.nextHazardAt = runtime.roomStart + 1400
+        runtime.nextLetterAt = runtime.cemeteryStart + 1800
+        runtime.nextHazardAt = runtime.cemeteryStart + 1400
         runtime.nextHeartAt = Infinity
         recycleAll()
-        applyBiome('room', false)
+        applyBiome('cemetery', false)
         runtime.player.x = runtime.metrics.width / 2
         runtime.player.y = runtime.metrics.height * 0.32
         runtime.player.vx = 0
         runtime.player.vy = 0
-        setDoorsOpen(false)
+        setGatesOpen(false)
         setEnterReady(false)
         syncHud(true)
         return
@@ -904,13 +1199,13 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
         return
       }
 
-      // Event 3: Room chaos (~62s)
-      if (!runtime.roomEventTriggered && runtime.elapsed >= 62000 && runtime.elapsed < 76000) {
-        runtime.roomEventTriggered = true
+      // Event 3: Cemetery mist (~62s)
+      if (!runtime.cemeteryEventTriggered && runtime.elapsed >= 62000 && runtime.elapsed < 76000) {
+        runtime.cemeteryEventTriggered = true
         runtime.eventBanner = {
-          title: '🍷 ZAMĘT W POKOJU! 🍷',
-          subtitle: 'Wirujące meble i kieliszki – łap trójkąty i steruj uważnie!',
-          type: 'room_chaos',
+          title: '🪦 CMENTARNA MGŁA! 🪦',
+          subtitle: 'Gęsty opar i upiorny wiatr – uważaj na nagrobki i kruki!',
+          type: 'cemetery_fog',
         }
         runtime.freezeUntil = runtime.elapsed + 2600
         runtime.postFreezeAction = () => {
@@ -924,20 +1219,14 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       // Spawn hazards
       if (runtime.elapsed >= runtime.nextHazardAt) {
         spawn('hazard')
-        const base = runtime.biome === 'winter' ? 1050 : runtime.biome === 'room' ? 1150 : 1350
+        const base = runtime.biome === 'winter' ? 1050 : runtime.biome === 'cemetery' ? 1150 : 1350
         runtime.nextHazardAt = runtime.elapsed + (base + Math.random() * 500) * DIFFICULTY_CONFIGS[runtime.difficulty].hazardIntervalMultiplier
       }
 
-      // Spawn pearls in Spring & Winter
-      if (runtime.biome !== 'room' && runtime.elapsed >= runtime.nextPearlAt) {
-        spawn('pearl')
-        runtime.nextPearlAt = runtime.elapsed + 2400 + Math.random() * 750
-      }
-
-      // Spawn falling triangles in Room
-      if (runtime.biome === 'room' && runtime.elapsed >= runtime.nextTriangleAt) {
-        spawn('triangle')
-        runtime.nextTriangleAt = runtime.elapsed + 2100 + Math.random() * 750
+      // Spawn letters
+      if (runtime.elapsed >= runtime.nextLetterAt && runtime.spawnedLetterIndex < SPAWN_LETTER_ORDER.length) {
+        spawn('letter')
+        runtime.nextLetterAt = runtime.elapsed + 4200 + Math.random() * 800
       }
 
       // Spawn hearts when wounded
@@ -957,6 +1246,9 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       if (runtime.state !== 'playing' || runtime.freezeUntil > runtime.elapsed) return
       runtime.player.vy = -330 * runtime.metrics.yScale
       runtime.player.vx += direction * 155 * runtime.metrics.xScale
+      if (runtime.biome === 'cemetery') {
+        playBatFlap()
+      }
     }
 
     const handlePointer = (x: number) => {
@@ -994,9 +1286,11 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
       runtime.player.vy = -330 * runtime.metrics.yScale
       if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'A') {
         runtime.player.vx -= 155 * runtime.metrics.xScale
+        if (runtime.biome === 'cemetery') playBatFlap()
       }
       if (event.key === 'ArrowRight' || event.key === 'd' || event.key === 'D') {
         runtime.player.vx += 155 * runtime.metrics.xScale
+        if (runtime.biome === 'cemetery') playBatFlap()
       }
     }
 
@@ -1064,7 +1358,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
     void init()
     return () => {
       disposed = true
-      if (finishTimer) window.clearTimeout(finishTimer)
+      stopCemeteryMusic()
       resizeObserver?.disconnect()
       window.removeEventListener('keydown', handleKey)
       controlsRef.current = null
@@ -1073,10 +1367,23 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
         app.destroy({ removeView: true, releaseGlobalResources: true }, { children: true, texture: true, textureSource: true })
       }
     }
-  }, [])
+  }, [startEndingChoreography])
+
+  const handleContinueToForm = () => {
+    onCompleteRef.current({
+      lettersCollected: collectedLetters.length,
+      totalLetters: 12,
+      difficulty,
+      difficultyLabel: DIFFICULTY_CONFIGS[difficulty].label,
+    })
+  }
 
   const biomes = getBiomesForDifficulty(difficulty)
   const stageLabel = biomes.find((item) => item.id === biome)?.label ?? biomes[0].label
+
+  // Split tiles for word 1 (0..5) and word 2 (6..11)
+  const word1Tiles = endingTiles.slice(0, 6)
+  const word2Tiles = endingTiles.slice(6, 12)
 
   return (
     <div className="veil-game-wrapper">
@@ -1089,26 +1396,51 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
           ))}
         </div>
         <span className="game-stage-pill">{stageLabel}</span>
-        <button
-          type="button"
-          className="game-pause-btn"
-          onClick={togglePause}
-          disabled={gameState === 'ready' || gameState === 'gameover' || gameState === 'victory' || gameState === 'checkpoint'}
-        >
-          {gameState === 'paused' ? 'Wznów' : 'Pauza'}
-        </button>
+        <div className="game-top-actions">
+          <button
+            type="button"
+            className="game-audio-btn"
+            onClick={handleToggleSound}
+            aria-label={soundMuted ? 'Włącz dźwięk' : 'Wycisz dźwięk'}
+            title={soundMuted ? 'Włącz dźwięk' : 'Wycisz dźwięk'}
+          >
+            {soundMuted ? '🔇' : '🔊'}
+          </button>
+          <button
+            type="button"
+            className="game-pause-btn"
+            onClick={togglePause}
+            disabled={gameState === 'ready' || gameState === 'gameover' || gameState === 'ending' || gameState === 'checkpoint'}
+          >
+            {gameState === 'paused' ? 'Wznów' : 'Pauza'}
+          </button>
+        </div>
       </div>
 
       <div className="game-progress-wrapper">
         <div className="game-progress-bar">
           <div className="game-progress-fill" style={{ width: `${progress}%` }} />
         </div>
-        {biome === 'room' ? (
-          <span className="game-triangle-counter">🔺 {triangles}</span>
-        ) : (
-          <span className="game-pearl-counter">◌ {pearls}</span>
-        )}
-        <span className="game-goal-icon">🚪</span>
+        <span className="game-letter-counter">
+          ✨ {collectedLetters.length}/12
+        </span>
+        <span className="game-goal-icon">🪦</span>
+      </div>
+
+      {/* Scrambled collected letters shelf around the top/border of the playfield */}
+      <div className="game-letters-shelf" aria-label="Zebrane litery w locie">
+        <span className="letters-shelf-title">Zebrane litery:</span>
+        <div className="letters-shelf-chips">
+          {collectedLetters.length === 0 ? (
+            <span className="shelf-empty-hint">Łap spadające runy z literami!</span>
+          ) : (
+            collectedLetters.map((item, idx) => (
+              <span key={`${item.id}-${idx}`} className="letter-shelf-chip pop-in">
+                {item.char}
+              </span>
+            ))
+          )}
+        </div>
       </div>
 
       <div className={`game-arena-container ${biome}`}>
@@ -1167,10 +1499,10 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
           <div className="game-overlay">
             <div className="game-modal-card">
               <div className="kite-avatar-icon">🪁</div>
-              <h3 className="modal-heading">Utrzymaj latawiec w locie!</h3>
+              <h3 className="modal-heading">Utrzymaj lot i odkryj hasło!</h3>
               <p className="modal-text">
-                Steruj latawcem za pomocą strzałek lub dotykając lewej/prawej strony ekranu.
-                Omijaj przeszkody i zbieraj punkty w drodze do czerwonego pokoju!
+                Steruj za pomocą strzałek lub dotykając lewej/prawej strony ekranu.
+                Omijaj przeszkody i zbieraj litery tajemniczego hasła!
               </p>
 
               <div className="game-difficulty-selector" aria-label="Wybór poziomu trudności">
@@ -1209,72 +1541,74 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
           </div>
         )}
 
-        {/* 3D Door Opening Transition to Red Room */}
+        {/* 3D Cemetery Gate Transition to Stage 3 */}
         {gameState === 'checkpoint' && (
-          <div className="game-overlay room-door-overlay" onClick={(e) => e.stopPropagation()}>
-            <div className="door-cinematic-card">
-              <span className="checkpoint-badge">Checkpoint • Przed drzwiami 🚪</span>
+          <div className="game-overlay cemetery-gate-overlay" onClick={(e) => e.stopPropagation()}>
+            <div className="door-cinematic-card cemetery-cinematic-card">
+              <span className="checkpoint-badge cemetery-badge">Checkpoint • Brama Cmentarza 🪦</span>
 
-              {/* 3D Double Door Architecture */}
-              <div className="door-stage-wrapper">
-                <div className={`door-glow-interior ${doorsOpen ? 'active' : ''}`}>
-                  <div className="door-light-beams" />
-                  <div className="door-floating-particles">
-                    <span className="dfp p1">🌹</span>
-                    <span className="dfp p2">🔺</span>
-                    <span className="dfp p3">✨</span>
-                    <span className="dfp p4">🍷</span>
-                    <span className="dfp p5">🔺</span>
+              <div className="cemetery-gate-stage">
+                <div className={`cemetery-mist-interior ${gatesOpen ? 'active' : ''}`}>
+                  <div className="mist-fog-cloud fog-1" />
+                  <div className="mist-fog-cloud fog-2" />
+                  <div className="cemetery-full-moon-mini" />
+                  <div className="flying-bats-swarm">
+                    <span className="fbs b1">🦇</span>
+                    <span className="fbs b2">🦇</span>
+                    <span className="fbs b3">🦇</span>
                   </div>
-                  {doorsOpen && <div className="flying-kite-door">🪁</div>}
+                  {gatesOpen && <div className="flying-player-bat">🦇</div>}
                 </div>
 
-                <div className="door-frame">
-                  <div className={`double-door door-left-wing ${doorsOpen ? 'opened' : ''}`}>
-                    <div className="door-wood-panel top" />
-                    <div className="door-wood-panel bottom" />
-                    <div className="door-handle handle-left" />
+                <div className="cemetery-gate-frame">
+                  <div className="gate-pillar pillar-left">
+                    <div className="pillar-spire" />
                   </div>
-                  <div className="door-center-gap" />
-                  <div className={`double-door door-right-wing ${doorsOpen ? 'opened' : ''}`}>
-                    <div className="door-wood-panel top" />
-                    <div className="door-wood-panel bottom" />
-                    <div className="door-handle handle-right" />
+                  <div className={`cemetery-gate-wing gate-left-wing ${gatesOpen ? 'opened' : ''}`}>
+                    <div className="iron-bars" />
+                    <div className="iron-cross-crest" />
+                  </div>
+                  <div className={`cemetery-gate-wing gate-right-wing ${gatesOpen ? 'opened' : ''}`}>
+                    <div className="iron-bars" />
+                    <div className="iron-cross-crest" />
+                  </div>
+                  <div className="gate-pillar pillar-right">
+                    <div className="pillar-spire" />
                   </div>
                 </div>
               </div>
 
-              {!doorsOpen ? (
+              {!gatesOpen ? (
                 <>
-                  <h3 className="modal-heading door-title">
-                    Dotarłaś przed tajemnicze drzwi... 💕
+                  <h3 className="modal-heading door-title cemetery-title">
+                    Brama Zapomnianego Cmentarza... 🪦
                   </h3>
                   <p className="modal-text">
-                    Przetrwałaś wiosenny wiatr i zimowy mróz. Co czeka za tymi drzwiami?
+                    Zimowy mróz ustąpił przed gęstą mgłą. Co czeka za starymi żelaznymi kratami?
                   </p>
                   <button
                     type="button"
-                    className="game-primary-btn door-action-btn"
-                    onClick={handleOpenDoors}
+                    className="game-primary-btn cemetery-action-btn"
+                    onClick={handleOpenGates}
                   >
-                    Otwórz drzwi 🚪✨
+                    Otwórz bramę 🗝️
                   </button>
                 </>
               ) : (
                 <>
-                  <h3 className="modal-heading door-title door-welcome-title">
-                    Witaj w Czerwonym Pokoju! 🍷✨
+                  <h3 className="modal-heading door-title cemetery-welcome-title">
+                    Transformacja w Nietoperza! 🦇
                   </h3>
                   <p className="modal-text">
-                    Życia odnowione! Zbieraj <strong>spadające trójkąty 🔺</strong> i omijaj wirujące krzesła, kieliszki z winem oraz róże!
+                    Życia odnowione! Zmień postać w nietoperza, unikaj nagrobków, upiornych ogników i zbierz ostatnie litery!
                   </p>
                   <button
                     type="button"
-                    className="game-primary-btn door-action-btn door-enter-btn"
+                    className="game-primary-btn cemetery-action-btn cemetery-enter-btn"
                     disabled={!enterReady}
                     onClick={resumeCheckpoint}
                   >
-                    Wchodzimy! 🪁
+                    Wlatujemy! 🦇
                   </button>
                 </>
               )}
@@ -1300,7 +1634,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
               <h3 className="modal-heading">Koniec lotu!</h3>
               <p className="modal-text">
                 {hasCheckpoint
-                  ? 'Nie martw się! Możesz wznowić grę bezpośrednio od Czerwonego Pokoju.'
+                  ? 'Możesz wznowić grę bezpośrednio od Bramy Cmentarza.'
                   : 'Złap serduszko po zderzeniu i leć dalej.'}
               </p>
 
@@ -1329,7 +1663,7 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
               {hasCheckpoint ? (
                 <div className="modal-actions-column">
                   <button type="button" className="game-primary-btn" onClick={restartFromCheckpoint}>
-                    Wróć do pokoju 🍷🚪
+                    Wróć na cmentarz 🪦🦇
                   </button>
                   <button type="button" className="game-subtle-btn" onClick={startGame}>
                     Od samego początku 🌸
@@ -1344,11 +1678,119 @@ export default function VeilGame({ onComplete }: VeilGameProps) {
           </div>
         )}
 
-        {gameState === 'victory' && (
-          <div className="game-overlay">
-            <div className="game-modal-card victory-card">
-              <p className="modal-text">Udało się! Wszystkie etapy pokonane! 🍷✨</p>
-            </div>
+        {/* Finałowa sekwencja: Animacja Kosy + "Koniec upiorności" + "Twój wynik" + Zmiana miejsc liter */}
+        {gameState === 'ending' && endingPhase !== 'none' && (
+          <div className="game-overlay scythe-ending-overlay" onClick={(e) => e.stopPropagation()}>
+            {/* Scythe Slash Layer - Slower & Visible with "Koniec upiorności" */}
+            {endingPhase === 'scythe' && (
+              <div className="scythe-cinematic-stage">
+                <div className="scythe-koniec-title">Koniec upiorności</div>
+                <div className="scythe-slash-fx">
+                  <div className="scythe-blade-visual">
+                    <svg viewBox="0 0 200 200" className="scythe-svg">
+                      <path
+                        d="M 30 180 Q 80 100 160 30"
+                        stroke="#4e342e"
+                        strokeWidth="9"
+                        strokeLinecap="round"
+                        fill="none"
+                      />
+                      <circle cx="160" cy="30" r="7" fill="#b0bec5" stroke="#37474f" strokeWidth="2" />
+                      <path
+                        d="M 160 30 C 145 5, 80 10, 30 65 C 75 52, 130 42, 160 30 Z"
+                        fill="url(#scytheBladeGrad)"
+                        stroke="#eceff1"
+                        strokeWidth="2.5"
+                        strokeLinejoin="round"
+                      />
+                      <defs>
+                        <linearGradient id="scytheBladeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#ffffff" />
+                          <stop offset="45%" stopColor="#cfd8dc" />
+                          <stop offset="100%" stopColor="#546e7a" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+                  <div className="scythe-slash-line" />
+                </div>
+              </div>
+            )}
+
+            {/* Revealed Result Screen: ONLY "Twój wynik" and the 12 slots */}
+            {endingPhase !== 'scythe' && (
+              <div className="phrase-reveal-card">
+                <h2 className="twoj-wynik-title">Twój wynik</h2>
+
+                <div className="phrase-reveal-container">
+                  {/* Word 1: Slots 0..5 */}
+                  <div className="phrase-word word-1">
+                    {word1Tiles.map((tile, idx) => {
+                      const isSwapping = activeSwappingIds.includes(tile.id)
+                      const isVisible =
+                        tile.isCollected ||
+                        endingPhase === 'dropped_grayout' ||
+                        endingPhase === 'swapping' ||
+                        endingPhase === 'solved'
+
+                      return (
+                        <div key={`w1-slot-${idx}`} className="letter-slot">
+                          {isVisible && (
+                            <span
+                              className={`slot-letter ${
+                                tile.isCollected ? 'letter-collected' : 'letter-grayout'
+                              } ${isSwapping ? 'is-swapping' : ''}`}
+                            >
+                              {tile.char}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <div className="phrase-word-gap" />
+
+                  {/* Word 2: Slots 6..11 */}
+                  <div className="phrase-word word-2">
+                    {word2Tiles.map((tile, idx) => {
+                      const isSwapping = activeSwappingIds.includes(tile.id)
+                      const isVisible =
+                        tile.isCollected ||
+                        endingPhase === 'dropped_grayout' ||
+                        endingPhase === 'swapping' ||
+                        endingPhase === 'solved'
+
+                      return (
+                        <div key={`w2-slot-${idx}`} className="letter-slot">
+                          {isVisible && (
+                            <span
+                              className={`slot-letter ${
+                                tile.isCollected ? 'letter-collected' : 'letter-grayout'
+                              } ${isSwapping ? 'is-swapping' : ''}`}
+                            >
+                              {tile.char}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {endingPhase === 'solved' && (
+                  <div className="phrase-complete-footer">
+                    <button
+                      type="button"
+                      className="btn btn-tak btn-kontynuujmy"
+                      onClick={handleContinueToForm}
+                    >
+                      Kontynuujmy ✨
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
