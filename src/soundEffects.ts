@@ -1,19 +1,15 @@
-// Web Audio API procedural sound engine for cemetery ambience & effects
-// No external MP3 downloads required - zero latency, reliable, never 404s.
+// Upbeat Swing Jazz & Sound Effects for Date Invite Game
+// Features brass, trumpets, saxophones and lively swing rhythm across all stages
 
 let audioCtx: AudioContext | null = null
 let isMuted = false
-let cemeteryGain: GainNode | null = null
-let droneOsc1: OscillatorNode | null = null
-let droneOsc2: OscillatorNode | null = null
-let droneOsc3: OscillatorNode | null = null
-let windSource: AudioBufferSourceNode | null = null
-let windGain: GainNode | null = null
-let chimeTimer: number | null = null
+let jazzAudio: HTMLAudioElement | null = null
 
 function getAudioContext(): AudioContext {
   if (!audioCtx) {
-    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     audioCtx = new AudioContextClass()
   }
   if (audioCtx.state === 'suspended') {
@@ -28,8 +24,9 @@ export function getSoundMuted(): boolean {
 
 export function setSoundMuted(muted: boolean): void {
   isMuted = muted
-  if (cemeteryGain && audioCtx) {
-    cemeteryGain.gain.setValueAtTime(isMuted ? 0 : 0.28, audioCtx.currentTime)
+  if (jazzAudio) {
+    jazzAudio.muted = muted
+    jazzAudio.volume = muted ? 0 : 0.35
   }
 }
 
@@ -38,206 +35,167 @@ export function toggleSoundMuted(): boolean {
   return isMuted
 }
 
-// Spooky ambient cemetery music with low drone, ethereal chord pads & whisper of wind
-export function startCemeteryMusic(): void {
-  if (droneOsc1) return // Already playing
+// -------------------------------------------------------------
+// Upbeat Swing Jazz Music (Brass, Trumpets, Saxophone)
+// Plays continuously across all stages of the game
+// -------------------------------------------------------------
+export function startMuseumJazzMusic(): void {
   try {
-    const ctx = getAudioContext()
-    const now = ctx.currentTime
-
-    // Master cemetery gain
-    const master = ctx.createGain()
-    master.gain.setValueAtTime(0.001, now)
-    master.gain.exponentialRampToValueAtTime(isMuted ? 0.0001 : 0.28, now + 2.5)
-    master.connect(ctx.destination)
-    cemeteryGain = master
-
-    // Low organ drone (D2 = 73.42Hz)
-    const osc1 = ctx.createOscillator()
-    osc1.type = 'sawtooth'
-    osc1.frequency.setValueAtTime(73.42, now)
-    const filter1 = ctx.createBiquadFilter()
-    filter1.type = 'lowpass'
-    filter1.frequency.setValueAtTime(140, now)
-    osc1.connect(filter1)
-    filter1.connect(master)
-    osc1.start()
-    droneOsc1 = osc1
-
-    // Ethereal fifth / minor pad (A2 = 110Hz + slight slow detune)
-    const osc2 = ctx.createOscillator()
-    osc2.type = 'sine'
-    osc2.frequency.setValueAtTime(110.0, now)
-    const lfo = ctx.createOscillator()
-    lfo.frequency.setValueAtTime(0.25, now)
-    const lfoGain = ctx.createGain()
-    lfoGain.gain.setValueAtTime(1.8, now)
-    lfo.connect(lfoGain)
-    lfoGain.connect(osc2.detune)
-    lfo.start()
-    osc2.connect(master)
-    osc2.start()
-    droneOsc2 = osc2
-
-    // High eerie harmonic (F3 = 174.61Hz)
-    const osc3 = ctx.createOscillator()
-    osc3.type = 'triangle'
-    osc3.frequency.setValueAtTime(174.61, now)
-    const filter3 = ctx.createBiquadFilter()
-    filter3.type = 'bandpass'
-    filter3.frequency.setValueAtTime(350, now)
-    filter3.Q.setValueAtTime(2.0, now)
-    osc3.connect(filter3)
-    filter3.connect(master)
-    osc3.start()
-    droneOsc3 = osc3
-
-    // Wind noise buffer
-    const bufferSize = ctx.sampleRate * 3
-    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
-    const output = noiseBuffer.getChannelData(0)
-    for (let i = 0; i < bufferSize; i++) {
-      output[i] = Math.random() * 2 - 1
+    if (!jazzAudio) {
+      jazzAudio = new Audio('./jazz.mp3')
+      jazzAudio.loop = true
+      jazzAudio.volume = isMuted ? 0 : 0.35
+      jazzAudio.muted = isMuted
     }
-
-    const whiteNoise = ctx.createBufferSource()
-    whiteNoise.buffer = noiseBuffer
-    whiteNoise.loop = true
-
-    const windFilter = ctx.createBiquadFilter()
-    windFilter.type = 'bandpass'
-    windFilter.frequency.setValueAtTime(420, now)
-    windFilter.Q.setValueAtTime(3.5, now)
-
-    const wGain = ctx.createGain()
-    wGain.gain.setValueAtTime(0.06, now)
-
-    whiteNoise.connect(windFilter)
-    windFilter.connect(wGain)
-    wGain.connect(master)
-    whiteNoise.start()
-
-    windSource = whiteNoise
-    windGain = wGain
-
-    // Periodic distant spooky church bell chime (every 8-12 seconds)
-    const playDistantBell = () => {
-      if (!cemeteryGain || isMuted) return
-      playBellToll()
-      chimeTimer = window.setTimeout(playDistantBell, 8000 + Math.random() * 5000)
+    if (jazzAudio.paused) {
+      const playPromise = jazzAudio.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Autoplay policy: will resume on first user interaction
+        })
+      }
     }
-    chimeTimer = window.setTimeout(playDistantBell, 4000)
   } catch (err) {
-    console.warn('AudioContext initialization failed or blocked:', err)
+    console.warn('Could not initialize jazz audio:', err)
   }
 }
 
-export function stopCemeteryMusic(): void {
-  if (chimeTimer) {
-    window.clearTimeout(chimeTimer)
-    chimeTimer = null
-  }
-  if (!audioCtx || !cemeteryGain) return
-  try {
-    const now = audioCtx.currentTime
-    cemeteryGain.gain.setValueAtTime(cemeteryGain.gain.value, now)
-    cemeteryGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2)
-    setTimeout(() => {
-      droneOsc1?.stop()
-      droneOsc2?.stop()
-      droneOsc3?.stop()
-      windSource?.stop()
-      droneOsc1?.disconnect()
-      droneOsc2?.disconnect()
-      droneOsc3?.disconnect()
-      windSource?.disconnect()
-      windGain?.disconnect()
-      cemeteryGain?.disconnect()
-      droneOsc1 = null
-      droneOsc2 = null
-      droneOsc3 = null
-      windSource = null
-      windGain = null
-      cemeteryGain = null
-    }, 1300)
-  } catch {
-    // Ignore cleanup errors
+export function stopMuseumJazzMusic(): void {
+  if (jazzAudio && !jazzAudio.paused) {
+    jazzAudio.pause()
   }
 }
 
-function playBellToll(): void {
+export const startJazzMusic = startMuseumJazzMusic
+export const stopJazzMusic = stopMuseumJazzMusic
+export const startCemeteryMusic = startMuseumJazzMusic
+export const stopCemeteryMusic = stopMuseumJazzMusic
+
+// -------------------------------------------------------------
+// Sound Effects for Scarab, Museum Doors & Sarcophagus
+// -------------------------------------------------------------
+
+// Scarab wing flutter sound (crisp, golden, gentle insect flap)
+export function playScarabFlap(): void {
   if (isMuted) return
   try {
     const ctx = getAudioContext()
     const now = ctx.currentTime
+
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
-    osc.type = 'sine'
-    // Deep bell fundamental (D3 = 146.83Hz)
-    osc.frequency.setValueAtTime(146.83, now)
-    gain.gain.setValueAtTime(0.12, now)
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.8)
+    osc.type = 'triangle'
+    osc.frequency.setValueAtTime(260, now)
+    osc.frequency.exponentialRampToValueAtTime(140, now + 0.08)
+
+    gain.gain.setValueAtTime(0.08, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08)
+
     osc.connect(gain)
     gain.connect(ctx.destination)
-    osc.start()
-    osc.stop(now + 4.0)
+    osc.start(now)
+    osc.stop(now + 0.09)
   } catch {
     // Ignore
   }
 }
+export const playBatFlap = playScarabFlap
 
-// Scythe swing & slash sound: dramatic airy swoosh with metallic ring
-export function playScytheSlash(): void {
+// Heavy ancient museum stone door opening rumble
+export function playDoorStoneOpen(): void {
   if (isMuted) return
   try {
     const ctx = getAudioContext()
     const now = ctx.currentTime
 
-    // White noise swoosh
-    const bufferSize = Math.floor(ctx.sampleRate * 0.45)
+    const bufferSize = Math.floor(ctx.sampleRate * 0.9)
     const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
     const data = noiseBuffer.getChannelData(0)
     for (let i = 0; i < bufferSize; i++) {
       data[i] = Math.random() * 2 - 1
     }
+
     const noise = ctx.createBufferSource()
     noise.buffer = noiseBuffer
 
     const filter = ctx.createBiquadFilter()
-    filter.type = 'bandpass'
-    filter.frequency.setValueAtTime(120, now)
-    filter.frequency.exponentialRampToValueAtTime(1200, now + 0.15)
-    filter.frequency.exponentialRampToValueAtTime(200, now + 0.45)
-    filter.Q.setValueAtTime(1.8, now)
+    filter.type = 'lowpass'
+    filter.frequency.setValueAtTime(180, now)
+    filter.frequency.linearRampToValueAtTime(320, now + 0.4)
+    filter.frequency.exponentialRampToValueAtTime(80, now + 0.9)
 
-    const noiseGain = ctx.createGain()
-    noiseGain.gain.setValueAtTime(0.001, now)
-    noiseGain.gain.exponentialRampToValueAtTime(0.4, now + 0.12)
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45)
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0.001, now)
+    gain.gain.linearRampToValueAtTime(0.22, now + 0.15)
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9)
 
     noise.connect(filter)
-    filter.connect(noiseGain)
-    noiseGain.connect(ctx.destination)
-    noise.start()
-    noise.stop(now + 0.5)
+    filter.connect(gain)
+    gain.connect(ctx.destination)
 
-    // Sharp metallic ring on the blade
-    const metal = ctx.createOscillator()
-    const metalGain = ctx.createGain()
-    metal.type = 'triangle'
-    metal.frequency.setValueAtTime(1580, now + 0.1)
-    metal.frequency.exponentialRampToValueAtTime(880, now + 0.6)
-    metalGain.gain.setValueAtTime(0.001, now)
-    metalGain.gain.setValueAtTime(0.22, now + 0.12)
-    metalGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.7)
-
-    metal.connect(metalGain)
-    metalGain.connect(ctx.destination)
-    metal.start(now + 0.1)
-    metal.stop(now + 0.75)
+    noise.start(now)
+    noise.stop(now + 0.95)
   } catch {
     // Ignore
   }
+}
+
+// Wrong answer buzzer ("To zła odpowiedź!" - playful humorous boop)
+export function playWrongAnswer(): void {
+  if (isMuted) return
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(180, now)
+    osc.frequency.setValueAtTime(130, now + 0.12)
+
+    gain.gain.setValueAtTime(0.15, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.3)
+  } catch {
+    // Ignore
+  }
+}
+
+// Right answer chime ("10/10! Prawidłowa odpowiedź!" - golden jazz major9 fanfara)
+export function playRightAnswer(): void {
+  if (isMuted) return
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+    const notes = [261.63, 329.63, 392.0, 493.88, 523.25, 659.25] // C, E, G, B, C, E
+
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, now + idx * 0.06)
+
+      gain.gain.setValueAtTime(0.001, now + idx * 0.06)
+      gain.gain.linearRampToValueAtTime(0.14, now + idx * 0.06 + 0.03)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.06 + 0.75)
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(now + idx * 0.06)
+      osc.stop(now + idx * 0.06 + 0.8)
+    })
+  } catch {
+    // Ignore
+  }
+}
+
+// Sarcophagus 3D opening sound (gentle ancient stone sliding rumble, no jarring chimes)
+export function playSarcophagusOpen(): void {
+  playDoorStoneOpen()
 }
 
 // Sparkle / crystal chime when a letter is collected or flies into its slot
@@ -246,7 +204,6 @@ export function playLetterChime(index = 0): void {
   try {
     const ctx = getAudioContext()
     const now = ctx.currentTime
-    // Scale frequencies (pentatonic / warm romantic scale)
     const notes = [523.25, 587.33, 659.25, 698.46, 783.99, 880.0, 987.77, 1046.5, 1174.66, 1318.51, 1396.91, 1567.98]
     const freq = notes[index % notes.length]
 
@@ -267,24 +224,7 @@ export function playLetterChime(index = 0): void {
   }
 }
 
-// Gentle flapping sound when steering bat
-export function playBatFlap(): void {
-  if (isMuted) return
-  try {
-    const ctx = getAudioContext()
-    const now = ctx.currentTime
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.type = 'triangle'
-    osc.frequency.setValueAtTime(180, now)
-    osc.frequency.exponentialRampToValueAtTime(70, now + 0.1)
-    gain.gain.setValueAtTime(0.1, now)
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1)
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.start()
-    osc.stop(now + 0.11)
-  } catch {
-    // Ignore
-  }
+// Scythe slash preserved for backwards compatibility
+export function playScytheSlash(): void {
+  playDoorStoneOpen()
 }

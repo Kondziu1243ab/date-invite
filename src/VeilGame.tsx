@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Application, Container, Graphics, Rectangle, Sprite, Text, type Ticker } from 'pixi.js'
 import {
-  startCemeteryMusic,
-  stopCemeteryMusic,
-  playScytheSlash,
+  startMuseumJazzMusic,
+  stopMuseumJazzMusic,
+  playScarabFlap,
+  playDoorStoneOpen,
+  playWrongAnswer,
+  playRightAnswer,
+  playSarcophagusOpen,
   playLetterChime,
-  playBatFlap,
   getSoundMuted,
   toggleSoundMuted,
 } from './soundEffects'
@@ -16,7 +19,7 @@ export type DifficultyConfig = {
   label: string
   emoji: string
   description: string
-  cemeteryStart: number
+  museumStart: number
   totalDuration: number
   hazardIntervalMultiplier: number
   eventWindMultiplier: number
@@ -28,8 +31,8 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
   easy: {
     label: 'Łatwy',
     emoji: '🌸',
-    description: 'Klasyczna gra: brak obrażeń od ścian, łagodniejszy wiatr.',
-    cemeteryStart: 44_000,
+    description: 'Klasyczna przygoda: brak obrażeń od ścian, łagodniejszy wiatr.',
+    museumStart: 44_000,
     totalDuration: 86_000,
     hazardIntervalMultiplier: 1.0,
     eventWindMultiplier: 1.0,
@@ -39,8 +42,8 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
   medium: {
     label: 'Średni',
     emoji: '⚡',
-    description: 'Ściany boczne ranią! Nieco dłuższe i silniejsze zjawiska pogodowe, ciut więcej przeszkód.',
-    cemeteryStart: 48_000,
+    description: 'Ściany boczne ranią! Nieco silniejszy wiatr, więcej przeszkód.',
+    museumStart: 48_000,
     totalDuration: 94_000,
     hazardIntervalMultiplier: 0.82,
     eventWindMultiplier: 1.25,
@@ -50,8 +53,8 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
   hard: {
     label: 'Trudny',
     emoji: '🔥',
-    description: 'Prawdziwe wyzwanie! Raniące ściany, potężne wichury, gęste przeszkody i dłuższy lot.',
-    cemeteryStart: 54_000,
+    description: 'Prawdziwe wyzwanie! Raniące ściany, potężne wichury i gęste przeszkody.',
+    museumStart: 54_000,
     totalDuration: 106_000,
     hazardIntervalMultiplier: 0.68,
     eventWindMultiplier: 1.55,
@@ -60,14 +63,14 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
   },
 }
 
-export type BiomeId = 'spring' | 'winter' | 'cemetery'
+export type BiomeId = 'spring' | 'winter' | 'museum'
 
 export const getBiomesForDifficulty = (diff: Difficulty) => {
   const cfg = DIFFICULTY_CONFIGS[diff]
   return [
-    { id: 'spring' as BiomeId, label: '🌸 Wiosenny wiatr', until: Math.round(cfg.cemeteryStart * 0.48), event: 'Wiosenny podmuch' },
-    { id: 'winter' as BiomeId, label: '❄️ Zimowy mróz', until: cfg.cemeteryStart, event: 'Śnieżyca' },
-    { id: 'cemetery' as BiomeId, label: '🪦 Ponury cmentarz', until: cfg.totalDuration, event: 'Cmentarna mgła' },
+    { id: 'spring' as BiomeId, label: '🌸 Wiosenny wiatr', until: Math.round(cfg.museumStart * 0.48), event: 'Wiosenny podmuch' },
+    { id: 'winter' as BiomeId, label: '❄️ Zimowy mróz', until: cfg.museumStart, event: 'Śnieżyca' },
+    { id: 'museum' as BiomeId, label: '🏛️ Muzeum Tajemnic', until: cfg.totalDuration, event: 'Złoty blask' },
   ] as const
 }
 
@@ -103,7 +106,7 @@ export const SECRET_LETTERS: SecretLetter[] = [
 // Scrambled sequence across the 3 stages:
 // Stage 1 (Spring): K, E, D, S
 // Stage 2 (Winter): A, Ł, T, Ś
-// Stage 3 (Cemetery): J, O, S, E
+// Stage 3 (Museum): J, O, S, E
 export const SPAWN_LETTER_ORDER: number[] = [
   10, // K
   1,  // E
@@ -129,7 +132,7 @@ export type VeilGameResult = {
 type EventBanner = {
   title: string
   subtitle: string
-  type: 'gust' | 'storm' | 'cemetery_fog'
+  type: 'gust' | 'storm' | 'museum_light'
 }
 
 type VeilGameProps = {
@@ -139,7 +142,7 @@ type VeilGameProps = {
 
 type GameState = 'ready' | 'playing' | 'checkpoint' | 'paused' | 'gameover' | 'ending'
 type EntityKind = 'hazard' | 'letter' | 'heart'
-type HazardType = 'twig' | 'icicle' | 'tombstone' | 'ghost_wisp' | 'raven'
+type HazardType = 'twig' | 'icicle' | 'vase' | 'golden_orb' | 'hieroglyph_slab'
 type Metrics = { width: number; height: number; xScale: number; yScale: number; unit: number }
 
 type Entity = {
@@ -177,32 +180,18 @@ type Runtime = {
   messageEndsAt: number
   lastHudAt: number
   hasReachedCheckpoint: boolean
-  cemeteryStageStarted: boolean
+  museumStageStarted: boolean
   freezeUntil: number
   eventBanner: EventBanner | null
   postFreezeAction: (() => void) | null
   springEventTriggered: boolean
   winterEventTriggered: boolean
-  cemeteryEventTriggered: boolean
+  museumEventTriggered: boolean
   difficulty: Difficulty
-  cemeteryStart: number
+  museumStart: number
   totalDuration: number
   collectedLetters: SecretLetter[]
 }
-
-export type EndingTile = {
-  id: number
-  char: string
-  isCollected: boolean
-}
-
-type EndingPhase =
-  | 'none'
-  | 'scythe'
-  | 'dropped_collected'
-  | 'dropped_grayout'
-  | 'swapping'
-  | 'solved'
 
 const createMetrics = (width: number, height: number): Metrics => ({
   width,
@@ -212,145 +201,118 @@ const createMetrics = (width: number, height: number): Metrics => ({
   unit: Math.max(Math.min(width / 340, height / 520), 0.72),
 })
 
-function drawKite(view: Graphics, size: number): void {
+// Royal Golden Scarab with fluttering gossamer wings & Egyptian jewelry (Active throughout the entire game)
+function drawScarab(view: Graphics, size: number, flapPhase = 0): void {
   view.clear()
   const s = size * 0.72
+  const wingAngle = Math.sin(flapPhase) * 0.44
 
-  // Tail ribbon string
-  view.moveTo(0, s * 0.52)
-    .bezierCurveTo(-s * 0.28, s * 0.82, s * 0.28, s * 1.08, 0, s * 1.38)
-    .bezierCurveTo(-s * 0.24, s * 1.64, s * 0.24, s * 1.88, 0, s * 2.15)
-    .stroke({ width: (2.2 * size) / 64, color: 0xff80ab, cap: 'round' })
-
-  // Ribbon bows on the tail
-  const bowPoints = [
-    { x: -s * 0.05, y: s * 0.88, color: 0xff4081 },
-    { x: s * 0.1, y: s * 1.32, color: 0xffd54f },
-    { x: -s * 0.08, y: s * 1.74, color: 0x00e5ff },
-    { x: 0, y: s * 2.14, color: 0xf50057 },
-  ]
-  for (const bow of bowPoints) {
-    const bw = (5.6 * size) / 64
-    const bh = (3.4 * size) / 64
-    view.ellipse(bow.x - bw * 0.8, bow.y, bw, bh).fill(bow.color)
-    view.ellipse(bow.x + bw * 0.8, bow.y, bw, bh).fill(bow.color)
-    view.circle(bow.x, bow.y, (2.2 * size) / 64).fill(0xffffff)
-  }
-
-  // Kite diamond vertices
-  const top = { x: 0, y: -s * 0.62 }
-  const right = { x: s * 0.48, y: -s * 0.06 }
-  const bottom = { x: 0, y: s * 0.52 }
-  const left = { x: -s * 0.48, y: -s * 0.06 }
-  const center = { x: 0, y: -s * 0.06 }
-
-  // 4 colorful quadrants
-  view.poly([top.x, top.y, center.x, center.y, left.x, left.y], true).fill(0xff4081)
-  view.poly([top.x, top.y, right.x, right.y, center.x, center.y], true).fill(0xffd54f)
-  view.poly([left.x, left.y, center.x, center.y, bottom.x, bottom.y], true).fill(0x00e5ff)
-  view.poly([center.x, center.y, right.x, right.y, bottom.x, bottom.y], true).fill(0xf50057)
-
-  // Outer kite border
-  view.poly([top.x, top.y, right.x, right.y, bottom.x, bottom.y, left.x, left.y], true)
-    .stroke({ width: (2.4 * size) / 64, color: 0xffffff, alpha: 0.95, join: 'round' })
-
-  // Wooden frame struts
-  view.moveTo(top.x, top.y).lineTo(bottom.x, bottom.y)
-    .stroke({ width: (2.2 * size) / 64, color: 0x5d4037, cap: 'round' })
-  view.moveTo(left.x, left.y).lineTo(right.x, right.y)
-    .stroke({ width: (2.2 * size) / 64, color: 0x5d4037, cap: 'round' })
-
-  // Center knot
-  view.circle(center.x, center.y, (3.4 * size) / 64).fill(0xffffff)
-    .circle(center.x, center.y, (1.8 * size) / 64).fill(0xe91e63)
-
-  // Sparkle gleam on upper tip
-  view.circle(top.x, top.y + s * 0.12, (2.6 * size) / 64).fill({ color: 0xffffff, alpha: 0.65 })
-}
-
-function drawBat(view: Graphics, size: number, flapPhase = 0): void {
-  view.clear()
-  const s = size * 0.72
-  const wingFlap = Math.sin(flapPhase) * 0.38
-
-  // Left wing tip & joint
-  const lwTipX = -s * 1.35
-  const lwTipY = -s * 0.15 + wingFlap * s * 0.8
-  const lwJointX = -s * 0.68
-  const lwJointY = -s * 0.55 + wingFlap * s * 0.35
-  const lwBaseY = s * 0.32
-
-  // Left wing membrane
+  // --- Wings (Semi-translucent golden gossamer with vein struts) ---
+  // Left Wing
+  const lwTipX = -s * 1.42
+  const lwTipY = -s * 0.32 + wingAngle * s * 0.95
+  const lwJointX = -s * 0.42
+  const lwJointY = -s * 0.22 + wingAngle * s * 0.3
   view.poly([
-    0, -s * 0.15,
+    0, -s * 0.1,
     lwJointX, lwJointY,
     lwTipX, lwTipY,
-    -s * 1.05, lwTipY + s * 0.35,
-    -s * 0.72, lwTipY + s * 0.22,
-    -s * 0.42, lwBaseY,
-    0, s * 0.28,
-  ], true).fill(0x231a34)
-    .stroke({ width: 1.8, color: 0x5a4178, join: 'round' })
+    -s * 1.12, lwTipY + s * 0.4,
+    -s * 0.52, s * 0.15,
+    0, 0.1,
+  ], true)
+    .fill({ color: 0xffecb3, alpha: 0.68 })
+    .stroke({ width: 1.5, color: 0xffd54f, alpha: 0.95 })
 
-  // Left wing struts
-  view.moveTo(0, -s * 0.15).lineTo(lwJointX, lwJointY).lineTo(lwTipX, lwTipY)
-    .stroke({ width: 2.2, color: 0x3d2b59, cap: 'round' })
-  view.moveTo(lwJointX, lwJointY).lineTo(-s * 1.05, lwTipY + s * 0.35)
-    .stroke({ width: 1.4, color: 0x3d2b59 })
-  view.moveTo(lwJointX, lwJointY).lineTo(-s * 0.72, lwTipY + s * 0.22)
-    .stroke({ width: 1.4, color: 0x3d2b59 })
+  view.moveTo(0, -s * 0.1).lineTo(lwTipX, lwTipY).stroke({ width: 1.3, color: 0xffca28, alpha: 0.85 })
+  view.moveTo(lwJointX, lwJointY).lineTo(-s * 1.12, lwTipY + s * 0.4).stroke({ width: 1.0, color: 0xffca28, alpha: 0.7 })
 
-  // Right wing tip & joint
-  const rwTipX = s * 1.35
-  const rwTipY = -s * 0.15 + wingFlap * s * 0.8
-  const rwJointX = s * 0.68
-  const rwJointY = -s * 0.55 + wingFlap * s * 0.35
-  const rwBaseY = s * 0.32
-
-  // Right wing membrane
+  // Right Wing
+  const rwTipX = s * 1.42
+  const rwTipY = -s * 0.32 + wingAngle * s * 0.95
+  const rwJointX = s * 0.42
+  const rwJointY = -s * 0.22 + wingAngle * s * 0.3
   view.poly([
-    0, -s * 0.15,
+    0, -s * 0.1,
     rwJointX, rwJointY,
     rwTipX, rwTipY,
-    s * 1.05, rwTipY + s * 0.35,
-    s * 0.72, rwTipY + s * 0.22,
-    s * 0.42, rwBaseY,
-    0, s * 0.28,
-  ], true).fill(0x231a34)
-    .stroke({ width: 1.8, color: 0x5a4178, join: 'round' })
+    s * 1.12, rwTipY + s * 0.4,
+    s * 0.52, s * 0.15,
+    0, 0.1,
+  ], true)
+    .fill({ color: 0xffecb3, alpha: 0.68 })
+    .stroke({ width: 1.5, color: 0xffd54f, alpha: 0.95 })
 
-  // Right wing struts
-  view.moveTo(0, -s * 0.15).lineTo(rwJointX, rwJointY).lineTo(rwTipX, rwTipY)
-    .stroke({ width: 2.2, color: 0x3d2b59, cap: 'round' })
-  view.moveTo(rwJointX, rwJointY).lineTo(s * 1.05, rwTipY + s * 0.35)
-    .stroke({ width: 1.4, color: 0x3d2b59 })
-  view.moveTo(rwJointX, rwJointY).lineTo(s * 0.72, rwTipY + s * 0.22)
-    .stroke({ width: 1.4, color: 0x3d2b59 })
+  view.moveTo(0, -s * 0.1).lineTo(rwTipX, rwTipY).stroke({ width: 1.3, color: 0xffca28, alpha: 0.85 })
+  view.moveTo(rwJointX, rwJointY).lineTo(s * 1.12, rwTipY + s * 0.4).stroke({ width: 1.0, color: 0xffca28, alpha: 0.7 })
 
-  // Bat body
-  view.ellipse(0, 0, s * 0.36, s * 0.48).fill(0x191124)
-    .stroke({ width: 1.8, color: 0x483262 })
-  view.ellipse(0, s * 0.08, s * 0.22, s * 0.28).fill({ color: 0x322248, alpha: 0.85 })
+  // --- Golden Egyptian Legs (6 articulated limbs) ---
+  // Front legs
+  view.moveTo(-s * 0.22, -s * 0.3).lineTo(-s * 0.62, -s * 0.52).lineTo(-s * 0.48, -s * 0.78)
+    .stroke({ width: 2.2, color: 0xb78103, cap: 'round', join: 'round' })
+  view.moveTo(s * 0.22, -s * 0.3).lineTo(s * 0.62, -s * 0.52).lineTo(s * 0.48, -s * 0.78)
+    .stroke({ width: 2.2, color: 0xb78103, cap: 'round', join: 'round' })
+  // Middle legs
+  view.moveTo(-s * 0.3, -s * 0.05).lineTo(-s * 0.78, -s * 0.08).lineTo(-s * 0.92, s * 0.16)
+    .stroke({ width: 2.0, color: 0xb78103, cap: 'round', join: 'round' })
+  view.moveTo(s * 0.3, -s * 0.05).lineTo(s * 0.78, -s * 0.08).lineTo(s * 0.92, s * 0.16)
+    .stroke({ width: 2.0, color: 0xb78103, cap: 'round', join: 'round' })
+  // Back legs
+  view.moveTo(-s * 0.26, s * 0.24).lineTo(-s * 0.68, s * 0.44).lineTo(-s * 0.54, s * 0.74)
+    .stroke({ width: 2.0, color: 0xb78103, cap: 'round', join: 'round' })
+  view.moveTo(s * 0.26, s * 0.24).lineTo(s * 0.68, s * 0.44).lineTo(s * 0.54, s * 0.74)
+    .stroke({ width: 2.0, color: 0xb78103, cap: 'round', join: 'round' })
 
-  // Bat head
-  view.circle(0, -s * 0.36, s * 0.3).fill(0x191124)
+  // --- Abdomen & Elytra (Shimmering Golden Shell) ---
+  view.ellipse(0, s * 0.12, s * 0.46, s * 0.58).fill(0xd4af37)
+    .stroke({ width: 2.0, color: 0xfff9c4 })
+  view.ellipse(0, s * 0.12, s * 0.41, s * 0.53).fill(0xffd700)
 
-  // Pointy ears
-  view.poly([-s * 0.26, -s * 0.36, -s * 0.36, -s * 0.78, -s * 0.1, -s * 0.54], true).fill(0x191124)
-  view.poly([-s * 0.23, -s * 0.4, -s * 0.32, -s * 0.72, -s * 0.12, -s * 0.54], true).fill(0x8e24aa)
+  // Elytra center division line
+  view.moveTo(0, -s * 0.16).lineTo(0, s * 0.68)
+    .stroke({ width: 1.8, color: 0x8c6d05, cap: 'round' })
 
-  view.poly([s * 0.26, -s * 0.36, s * 0.36, -s * 0.78, s * 0.1, -s * 0.54], true).fill(0x191124)
-  view.poly([s * 0.23, -s * 0.4, s * 0.32, -s * 0.72, s * 0.12, -s * 0.54], true).fill(0x8e24aa)
+  // Carved wing-case hieroglyphic highlights
+  view.ellipse(-s * 0.18, s * 0.14, s * 0.13, s * 0.26).fill({ color: 0xfff176, alpha: 0.6 })
+  view.ellipse(s * 0.18, s * 0.14, s * 0.13, s * 0.26).fill({ color: 0xfff176, alpha: 0.6 })
 
-  // Glowing eyes
-  view.circle(-s * 0.12, -s * 0.38, s * 0.075).fill(0xff1744)
-    .circle(-s * 0.1, -s * 0.4, s * 0.03).fill(0xffffff)
-  view.circle(s * 0.12, -s * 0.38, s * 0.075).fill(0xff1744)
-    .circle(s * 0.14, -s * 0.4, s * 0.03).fill(0xffffff)
+  // --- Thorax (Chest plate) ---
+  view.poly([
+    -s * 0.36, -s * 0.18,
+    s * 0.36, -s * 0.18,
+    s * 0.26, -s * 0.42,
+    -s * 0.26, -s * 0.42,
+  ], true)
+    .fill(0xf57f17)
+    .stroke({ width: 1.6, color: 0xfff59d })
 
-  // Fangs
-  view.poly([-s * 0.07, -s * 0.26, -s * 0.05, -s * 0.18, -s * 0.02, -s * 0.26], true).fill(0xffffff)
-  view.poly([s * 0.02, -s * 0.26, s * 0.05, -s * 0.18, s * 0.07, -s * 0.26], true).fill(0xffffff)
+  // Turquoise / Lapis lazuli jewel centerpiece
+  view.ellipse(0, -s * 0.3, s * 0.11, s * 0.08).fill(0x00bcd4)
+    .circle(0, -s * 0.3, s * 0.035).fill(0xffffff)
+
+  // --- Head & Crown (Solar disc) ---
+  view.poly([
+    -s * 0.2, -s * 0.42,
+    s * 0.2, -s * 0.42,
+    s * 0.24, -s * 0.56,
+    s * 0.1, -s * 0.63,
+    0, -s * 0.56,
+    -s * 0.1, -s * 0.63,
+    -s * 0.24, -s * 0.56,
+  ], true)
+    .fill(0xd4af37)
+    .stroke({ width: 1.4, color: 0xfff9c4 })
+
+  // Glowing ruby eyes
+  view.circle(-s * 0.12, -s * 0.48, s * 0.04).fill(0xd50000)
+    .circle(-s * 0.11, -s * 0.49, s * 0.016).fill(0xffffff)
+  view.circle(s * 0.12, -s * 0.48, s * 0.04).fill(0xd50000)
+    .circle(s * 0.13, -s * 0.49, s * 0.016).fill(0xffffff)
+
+  // Solar disc crowning head
+  view.circle(0, -s * 0.72, s * 0.11).fill(0xff6f00)
+    .stroke({ width: 1.2, color: 0xffd54f })
+  view.circle(0, -s * 0.72, s * 0.05).fill(0xffeb3b)
 }
 
 function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
@@ -362,17 +324,17 @@ function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
     entity.radius = 16 * unit
     const r = entity.radius
 
-    if (biome === 'cemetery') {
-      graphics.circle(0, 0, r * 1.35).fill({ color: 0xba68c8, alpha: 0.28 })
+    if (biome === 'museum') {
+      graphics.circle(0, 0, r * 1.4).fill({ color: 0xffd54f, alpha: 0.35 })
       graphics.poly([
-        0, -r,
-        r * 0.88, -r * 0.5,
-        r * 0.88, r * 0.5,
-        0, r,
-        -r * 0.88, r * 0.5,
-        -r * 0.88, -r * 0.5,
-      ], true).fill(0x4a148c).stroke({ width: 2.2 * unit, color: 0xce93d8, join: 'round' })
-      graphics.circle(0, 0, r * 0.45).fill({ color: 0xab47bc, alpha: 0.5 })
+        0, -r * 1.1,
+        r * 0.95, -r * 0.5,
+        r * 0.95, r * 0.5,
+        0, r * 1.1,
+        -r * 0.95, r * 0.5,
+        -r * 0.95, -r * 0.5,
+      ], true).fill(0xb78103).stroke({ width: 2.4 * unit, color: 0xfff59d, join: 'round' })
+      graphics.circle(0, 0, r * 0.55).fill({ color: 0xffd700, alpha: 0.65 })
     } else if (biome === 'winter') {
       graphics.circle(0, 0, r * 1.35).fill({ color: 0x4fc3f7, alpha: 0.28 })
       graphics.poly([
@@ -419,50 +381,52 @@ function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
     return
   }
 
-  if (biome === 'cemetery') {
-    const hazard = entity.hazardType || 'tombstone'
+  if (biome === 'museum') {
+    const hazard = entity.hazardType || 'vase'
 
-    if (hazard === 'tombstone') {
+    if (hazard === 'vase') {
       entity.radius = 20 * unit
       const r = entity.radius
-      graphics.ellipse(0, r * 0.85, r * 0.9, r * 0.22).fill(0x181818)
-      graphics.moveTo(-r * 0.65, r * 0.85)
-        .lineTo(-r * 0.65, -r * 0.3)
-        .bezierCurveTo(-r * 0.65, -r * 0.95, r * 0.65, -r * 0.95, r * 0.65, -r * 0.3)
-        .lineTo(r * 0.65, r * 0.85)
-        .closePath()
-        .fill(0x3e3e44)
-        .stroke({ width: 1.8 * unit, color: 0x6e6e76 })
-      graphics.rect(-2.2 * unit, -r * 0.65, 4.4 * unit, r * 0.75).fill(0x1e1e24)
-      graphics.rect(-r * 0.3, -r * 0.45, r * 0.6, 4.4 * unit).fill(0x1e1e24)
-      graphics.ellipse(-r * 0.4, r * 0.65, r * 0.18, r * 0.12).fill(0x2e7d32)
+      // Ancient Egyptian Clay & Gold Amphora Vase
+      graphics.ellipse(0, 0, r * 0.75, r * 0.95).fill(0xc0392b)
+        .stroke({ width: 1.6 * unit, color: 0xffd54f })
+      graphics.rect(-r * 0.7, -r * 0.2, r * 1.4, r * 0.4).fill(0xd4af37)
+      graphics.poly([
+        -r * 0.42, -r * 0.85,
+        r * 0.42, -r * 0.85,
+        r * 0.28, -r * 0.55,
+        -r * 0.28, -r * 0.55,
+      ], true).fill(0x870000).stroke({ width: 1.2 * unit, color: 0xffd54f })
+      graphics.ellipse(0, -r * 0.85, r * 0.42, r * 0.14).fill(0xffd54f)
+      graphics.circle(-r * 0.75, -r * 0.2, r * 0.2).stroke({ width: 2.2 * unit, color: 0xd4af37 })
+      graphics.circle(r * 0.75, -r * 0.2, r * 0.2).stroke({ width: 2.2 * unit, color: 0xd4af37 })
       return
     }
 
-    if (hazard === 'ghost_wisp') {
+    if (hazard === 'golden_orb') {
       entity.radius = 18 * unit
       const r = entity.radius
-      graphics.circle(0, 0, r * 1.3).fill({ color: 0x00e5ff, alpha: 0.2 })
-      graphics.moveTo(0, -r)
-        .bezierCurveTo(r * 0.9, -r * 0.3, r * 0.8, r * 0.6, 0, r)
-        .bezierCurveTo(-r * 0.8, r * 0.6, -r * 0.9, -r * 0.3, 0, -r)
-        .fill(0x00bcd4)
-        .stroke({ width: 1.5 * unit, color: 0xe0f7fa })
-      graphics.circle(0, -r * 0.15, r * 0.4).fill(0xffffff)
-      graphics.circle(-r * 0.2, -r * 0.2, r * 0.12).fill(0x006064)
-      graphics.circle(r * 0.2, -r * 0.2, r * 0.12).fill(0x006064)
+      // Glowing golden energy relic
+      graphics.circle(0, 0, r * 1.35).fill({ color: 0xffd700, alpha: 0.25 })
+      graphics.circle(0, 0, r).fill(0xffb300).stroke({ width: 2.0 * unit, color: 0xfff9c4 })
+      graphics.circle(0, 0, r * 0.55).fill(0xffffff)
+      graphics.poly([
+        0, -r * 0.9,
+        r * 0.9, 0,
+        0, r * 0.9,
+        -r * 0.9, 0,
+      ], true).stroke({ width: 1.5 * unit, color: 0xff6f00 })
       return
     }
 
+    // hieroglyph_slab
     entity.radius = 19 * unit
     const r = entity.radius
-    graphics.ellipse(0, 0, r * 0.4, r * 0.65).fill(0x121216)
-    graphics.poly([0, -r * 0.2, -r * 1.15, -r * 0.55, -r * 0.8, r * 0.25, 0, r * 0.3], true)
-      .fill(0x21212a).stroke({ width: 1.4, color: 0x424252 })
-    graphics.poly([0, -r * 0.2, r * 1.15, -r * 0.55, r * 0.8, r * 0.25, 0, r * 0.3], true)
-      .fill(0x21212a).stroke({ width: 1.4, color: 0x424252 })
-    graphics.poly([0, -r * 0.6, r * 0.45, -r * 0.65, 0, -r * 0.45], true).fill(0xffb300)
-    graphics.circle(r * 0.08, -r * 0.55, 2.2 * unit).fill(0xff1744)
+    graphics.rect(-r * 0.75, -r * 0.85, r * 1.5, r * 1.7).fill(0x5d4037)
+      .stroke({ width: 2.0 * unit, color: 0xd4af37 })
+    graphics.circle(0, -r * 0.38, r * 0.26).stroke({ width: 1.6 * unit, color: 0xffd54f })
+    graphics.moveTo(0, -r * 0.1).lineTo(0, r * 0.48).stroke({ width: 2.0 * unit, color: 0xffd54f })
+    graphics.moveTo(-r * 0.38, r * 0.15).lineTo(r * 0.38, r * 0.15).stroke({ width: 2.0 * unit, color: 0xffd54f })
     return
   }
 
@@ -475,6 +439,7 @@ function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
     return
   }
 
+  // Spring twig with cherry blossoms
   entity.radius = 16 * unit
   const r = entity.radius
   graphics.moveTo(-r * 0.75, -r * 0.55)
@@ -494,60 +459,77 @@ function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
 
 function drawBackdrop(view: Graphics, metrics: Metrics, biome: BiomeId): void {
   view.clear()
-  if (biome === 'cemetery') {
-    view.rect(0, 0, metrics.width, metrics.height * 0.65).fill(0x0a0c1a)
-    view.rect(0, metrics.height * 0.65, metrics.width, metrics.height * 0.35).fill(0x141224)
+  if (biome === 'museum') {
+    // Majestic Egyptian Museum Gallery Backdrop
+    view.rect(0, 0, metrics.width, metrics.height * 0.58).fill(0x2a1e12)
+    view.rect(0, metrics.height * 0.58, metrics.width, metrics.height * 0.42).fill(0x181008)
 
-    const moonX = metrics.width * 0.8
-    const moonY = metrics.height * 0.22
-    const moonR = 26 * metrics.unit
-    view.circle(moonX, moonY, moonR * 2.2).fill({ color: 0x9fa8da, alpha: 0.12 })
-    view.circle(moonX, moonY, moonR * 1.5).fill({ color: 0xc5cae9, alpha: 0.22 })
-    view.circle(moonX, moonY, moonR).fill(0xe8eaf6)
-    view.circle(moonX - moonR * 0.2, moonY - moonR * 0.25, moonR * 0.25).fill({ color: 0xb0bec5, alpha: 0.35 })
-    view.circle(moonX + moonR * 0.35, moonY + moonR * 0.1, moonR * 0.18).fill({ color: 0xb0bec5, alpha: 0.3 })
+    // Warm museum spotlight
+    const lightX = metrics.width * 0.5
+    const lightR = metrics.width * 0.55
+    view.circle(lightX, metrics.height * 0.2, lightR).fill({ color: 0xffd54f, alpha: 0.07 })
 
-    view.poly([
-      0, metrics.height * 0.72,
-      metrics.width * 0.3, metrics.height * 0.68,
-      metrics.width * 0.65, metrics.height * 0.74,
-      metrics.width, metrics.height * 0.7,
-      metrics.width, metrics.height,
-      0, metrics.height,
-    ], true).fill(0x0d0d18)
+    // Sandstone masonry wall bands
+    for (let y = 32; y < metrics.height * 0.68; y += 36) {
+      view.moveTo(0, y).lineTo(metrics.width, y).stroke({ width: 1, color: 0x4e3820, alpha: 0.35 })
+    }
 
-    const tx = metrics.width * 0.25
-    const ty = metrics.height * 0.69
-    view.rect(tx - 2, ty - 18, 4, 18).fill(0x080810)
-    view.rect(tx - 8, ty - 14, 16, 3.5).fill(0x080810)
+    // Side Egyptian Columns with gold lotus capitals
+    const pillarW = 20 * metrics.unit
+    // Left pillar
+    view.rect(0, 0, pillarW, metrics.height).fill(0x3e2c1a)
+      .stroke({ width: 1.5, color: 0x6d4c2d })
+    view.rect(pillarW * 0.8, 0, pillarW * 0.2, metrics.height).fill({ color: 0xffd54f, alpha: 0.09 })
+    // Right pillar
+    view.rect(metrics.width - pillarW, 0, pillarW, metrics.height).fill(0x3e2c1a)
+      .stroke({ width: 1.5, color: 0x6d4c2d })
+    view.rect(metrics.width - pillarW, 0, pillarW * 0.2, metrics.height).fill({ color: 0xffd54f, alpha: 0.09 })
 
-    const tx2 = metrics.width * 0.68
-    const ty2 = metrics.height * 0.73
-    view.rect(tx2 - 2, ty2 - 14, 4, 14).fill(0x080810)
-    view.rect(tx2 - 6, ty2 - 11, 12, 3).fill(0x080810)
+    // Gold hieroglyphic trim strip
+    view.rect(0, metrics.height * 0.26, metrics.width, 8 * metrics.unit).fill({ color: 0xd4af37, alpha: 0.2 })
 
-    view.rect(0, metrics.height * 0.86, metrics.width, metrics.height * 0.14).fill(0x070710)
+    // Floor edge
+    view.rect(0, metrics.height * 0.85, metrics.width, metrics.height * 0.15).fill(0x110a04)
+    view.moveTo(0, metrics.height * 0.85).lineTo(metrics.width, metrics.height * 0.85)
+      .stroke({ width: 2, color: 0xd4af37, alpha: 0.55 })
     return
   }
 
   const palette =
     biome === 'spring'
       ? [0xf7fff1, 0xe5f7d5, 0x9fd596]
-      : [0xf4fafd, 0xe3f2fd, 0x9ec5e5]
+      : [0xf4fafd, 0xe3f2fd, 0x9ec5e5] // Winter crisp blue
 
   view.rect(0, 0, metrics.width, metrics.height * 0.48).fill(palette[0])
     .rect(0, metrics.height * 0.48, metrics.width, metrics.height * 0.52).fill(palette[1])
-    .rect(0, metrics.height * 0.82, metrics.width, metrics.height * 0.18).fill({ color: palette[2], alpha: 0.2 })
+    .rect(0, metrics.height * 0.82, metrics.width, metrics.height * 0.18).fill({ color: palette[2], alpha: 0.22 })
+}
+
+// Scramble/shuffle helper so letters hover in scrambled random order
+function scrambleLetters(letters: SecretLetter[]): SecretLetter[] {
+  if (letters.length <= 1) return [...letters]
+  const arr = [...letters]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  // Ensure it's not accidentally in sorted id order
+  const isSorted = arr.every((item, idx) => idx === 0 || item.id >= arr[idx - 1].id)
+  if (isSorted && arr.length > 1) {
+    [arr[0], arr[1]] = [arr[1], arr[0]]
+  }
+  return arr
 }
 
 export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const controlsRef = useRef<{
     start: () => void
-    startCheckpoint: () => void
     resumeCheckpoint: () => void
     pause: () => void
+    skip?: () => void
     steer: (direction: -1 | 1) => void
+    getCollectedLetters?: () => SecretLetter[]
   } | null>(null)
   const onCompleteRef = useRef(onComplete)
   onCompleteRef.current = onComplete
@@ -555,9 +537,9 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
   const [gameState, setGameState] = useState<GameState>('ready')
   const [lives, setLives] = useState(3)
   const [collectedLetters, setCollectedLetters] = useState<SecretLetter[]>([])
+  const [skyLetters, setSkyLetters] = useState<SecretLetter[]>([])
   const [hasCheckpoint, setHasCheckpoint] = useState(false)
-  const [gatesOpen, setGatesOpen] = useState(false)
-  const [enterReady, setEnterReady] = useState(false)
+  const [doorOpening, setDoorOpening] = useState(false)
   const [biome, setBiome] = useState<BiomeId>('spring')
   const [progress, setProgress] = useState(0)
   const [toast, setToast] = useState<string | null>(null)
@@ -567,10 +549,16 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
   const difficultyRef = useRef<Difficulty>('easy')
   const [soundMuted, setSoundMuted] = useState(getSoundMuted())
 
-  // Ending Cutscene States
-  const [endingPhase, setEndingPhase] = useState<EndingPhase>('none')
-  const [endingTiles, setEndingTiles] = useState<EndingTile[]>([])
-  const [activeSwappingIds, setActiveSwappingIds] = useState<number[]>([])
+  // Ending Sarcophagus & Guardian States
+  const [endingPhase, setEndingPhase] = useState<
+    'none' | 'guardian_question' | 'guardian_wrong' | 'guardian_correct' | 'sarcophagus_opening' | 'flying_letters' | 'complete'
+  >('none')
+  const [guardianMessage, setGuardianMessage] = useState<string | null>(null)
+  const [selectedHotValue, setSelectedHotValue] = useState<number | null>(null)
+  const [placedCollectedIds, setPlacedCollectedIds] = useState<number[]>([])
+  const [activeFlyingId, setActiveFlyingId] = useState<number | null>(null)
+  const [showGrayout, setShowGrayout] = useState(false)
+  const [isFlashing, setIsFlashing] = useState(false)
 
   const selectDifficulty = useCallback((nextDifficulty: Difficulty) => {
     difficultyRef.current = nextDifficulty
@@ -582,119 +570,143 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
     setSoundMuted(next)
   }, [])
 
-  const startGame = useCallback(() => controlsRef.current?.start(), [])
-  const restartFromCheckpoint = useCallback(() => controlsRef.current?.startCheckpoint(), [])
-  const resumeCheckpoint = useCallback(() => controlsRef.current?.resumeCheckpoint(), [])
+  const startGame = useCallback(() => {
+    startMuseumJazzMusic() // Upbeat swing jazz startuje od razu i gra przez wszystkie etapy!
+    controlsRef.current?.start()
+  }, [])
+  const resumeCheckpoint = useCallback(() => {
+    startMuseumJazzMusic()
+    controlsRef.current?.resumeCheckpoint()
+  }, [])
   const togglePause = useCallback(() => controlsRef.current?.pause(), [])
 
-  const handleOpenGates = useCallback(() => {
-    setGatesOpen(true)
+  // Otwarcie sarkofagu i powolny, płynny przelot zebranych liter przy muzyce jazzowej
+  const triggerSarcophagusFlight = useCallback((initialLetters?: SecretLetter[]) => {
+    const lettersToUse = initialLetters ?? collectedLetters
+    startMuseumJazzMusic() // Jazz gra dalej w tle bez przerw!
+    playSarcophagusOpen()
+    setEndingPhase('sarcophagus_opening')
+    setPlacedCollectedIds([])
+    setActiveFlyingId(null)
+    setShowGrayout(false)
+    setIsFlashing(false)
+
+    // Losowa, nieuporządkowana chmura liter w powietrzu (tak jak w zamierzeniu użytkownika)
+    const scrambled = scrambleLetters(lettersToUse)
+    setSkyLetters(scrambled)
+
+    // Po otwarciu wieka (~1.2s):
     setTimeout(() => {
-      setEnterReady(true)
-    }, 650)
-  }, [])
+      setEndingPhase('flying_letters')
 
-  // Start the choreographed ending sequence
-  const startEndingChoreography = useCallback((collected: SecretLetter[]) => {
-    stopCemeteryMusic()
-    setGameState('ending')
-    setEndingPhase('scythe')
-    playScytheSlash()
-
-    // Build the initial 12 slots:
-    // First: collected letters in the order collected
-    // Next: uncollected letters as grayout
-    const collectedIds = new Set(collected.map((c) => c.id))
-    const initialTiles: EndingTile[] = [
-      ...collected.map((c) => ({ id: c.id, char: c.char, isCollected: true })),
-      ...SECRET_LETTERS.filter((l) => !collectedIds.has(l.id)).map((l) => ({
-        id: l.id,
-        char: l.char,
-        isCollected: false,
-      })),
-    ]
-    setEndingTiles(initialTiles)
-
-    // Step 1: Scythe swings for 2.4s while "Koniec upiorności" is displayed
-    setTimeout(() => {
-      // Step 2: Show "Twój wynik" and drop collected letters into the first slots
-      setEndingPhase('dropped_collected')
-      playLetterChime(1)
-
-      // Step 3: After 1.4s, drop the grayed-out letters into the remaining slots
-      setTimeout(() => {
-        setEndingPhase('dropped_grayout')
-        playLetterChime(4)
-
-        // Step 4: After another 1.4s, start swapping letters until "JESTEŚ SŁODKA" is formed
+      if (scrambled.length === 0) {
+        // Jeśli nie było zebranych liter, po chwili błysk i zarysowanie szarych liter w pustych slotach
         setTimeout(() => {
-          setEndingPhase('swapping')
-        }, 1400)
-      }, 1400)
-    }, 2400)
-  }, [])
-
-  // Swap animation ticker: step by step swaps elements until sorted
-  useEffect(() => {
-    if (endingPhase !== 'swapping') return
-
-    let current = [...endingTiles]
-    let stepCount = 0
-
-    const interval = window.setInterval(() => {
-      // Find first out-of-order element
-      let firstMisplaced = -1
-      for (let i = 0; i < current.length; i++) {
-        if (current[i].id !== i) {
-          firstMisplaced = i
-          break
-        }
-      }
-
-      if (firstMisplaced === -1) {
-        // All elements are in place!
-        clearInterval(interval)
-        setActiveSwappingIds([])
-        setEndingPhase('solved')
-        playLetterChime(11)
+          setIsFlashing(true)
+          setShowGrayout(true)
+          setTimeout(() => {
+            setIsFlashing(false)
+            setEndingPhase('complete')
+          }, 950)
+        }, 900)
         return
       }
 
-      // Find where element with id `firstMisplaced` currently is
-      const targetId = firstMisplaced
-      const currentPos = current.findIndex((t) => t.id === targetId)
+      let idx = 0
+      const interval = window.setInterval(() => {
+        if (idx < scrambled.length) {
+          const currentItem = scrambled[idx]
+          setActiveFlyingId(currentItem.id)
+          idx += 1
 
-      if (currentPos !== -1) {
-        // Swap items at firstMisplaced and currentPos
-        const next = [...current]
-        const temp = next[firstMisplaced]
-        next[firstMisplaced] = next[currentPos]
-        next[currentPos] = temp
-        current = next
-        setEndingTiles(next)
+          // Litera dokuje w swoim dedykowanym gnieździe w sarkofagu (bez żadnych drażniących dźwięków - gra tylko płynny jazz)
+          setTimeout(() => {
+            setPlacedCollectedIds((prev) => [...prev, currentItem.id])
+          }, 480)
 
-        setActiveSwappingIds([next[firstMisplaced].id, next[currentPos].id])
-        playLetterChime(stepCount)
-        stepCount += 1
+          // Po włożeniu wszystkich zebranych liter:
+          if (idx >= scrambled.length) {
+            clearInterval(interval)
+            setTimeout(() => {
+              setActiveFlyingId(null)
+              // Błysk sarkofagu i płynne powiększenie szarych brakujących liter w pustych otworach
+              setIsFlashing(true)
+              setShowGrayout(true)
 
-        setTimeout(() => {
-          setActiveSwappingIds([])
-        }, 220)
-      }
-    }, 500)
+              setTimeout(() => {
+                setIsFlashing(false)
+                setEndingPhase('complete')
+              }, 1000)
+            }, 850)
+          }
+        }
+      }, 680)
+    }, 1200)
+  }, [collectedLetters])
 
-    return () => clearInterval(interval)
-  }, [endingPhase])
+  // "Pomiń" przenosi bezpośrednio do ekranu finałowego z gry (otwarcie sarkofagu i animacja wlotu liter)
+  const handleSkipGame = useCallback(() => {
+    startMuseumJazzMusic() // Nie zatrzymujemy jazzu
+    controlsRef.current?.skip?.()
+    setGameState('ending')
+    const currentCollected = controlsRef.current?.getCollectedLetters?.() ?? collectedLetters
+    setCollectedLetters([...currentCollected])
+    triggerSarcophagusFlight(currentCollected)
+  }, [collectedLetters, triggerSarcophagusFlight])
 
-  // If test skip was requested from the invite screen
+  // Click "Wejdź" in Checkpoint (Museum Entrance)
+  const handleEnterMuseum = useCallback(() => {
+    setDoorOpening(true)
+    playDoorStoneOpen()
+    setTimeout(() => {
+      setDoorOpening(false)
+      resumeCheckpoint()
+    }, 900)
+  }, [resumeCheckpoint])
+
+  // Start the Sarcophagus ending sequence
+  const startEndingChoreography = useCallback((collected: SecretLetter[]) => {
+    startMuseumJazzMusic() // Jazz gra dalej
+    setGameState('ending')
+    setEndingPhase('guardian_question')
+    setGuardianMessage(null)
+    setSelectedHotValue(null)
+    setPlacedCollectedIds([])
+    setActiveFlyingId(null)
+    setShowGrayout(false)
+    setIsFlashing(false)
+    setCollectedLetters([...collected])
+    setSkyLetters(scrambleLetters(collected))
+  }, [])
+
+  // Handler for Guardian Hot Question (1 to 10)
+  const handleAnswerHotQuestion = (value: number) => {
+    setSelectedHotValue(value)
+    if (value !== 10) {
+      playWrongAnswer()
+      setGuardianMessage('To zła odpowiedź! ❌ Spróbuj jeszcze raz...')
+      setEndingPhase('guardian_wrong')
+    } else {
+      playRightAnswer()
+      setGuardianMessage('Prawidłowa odpowiedź! 10/10! Sarkofag staje otworem... ✨')
+      setEndingPhase('guardian_correct')
+
+      // Sarcophagus opens after 1.2s
+      setTimeout(() => {
+        triggerSarcophagusFlight(collectedLetters)
+      }, 1200)
+    }
+  }
+
+  // Skip test shortcut
   useEffect(() => {
     if (skipToEndTest) {
-      // Pick exactly 6 letters (half of the 12) from SPAWN_LETTER_ORDER
       const halfIds = SPAWN_LETTER_ORDER.slice(0, 6)
       const halfLetters = halfIds
         .map((id) => SECRET_LETTERS.find((l) => l.id === id)!)
         .filter(Boolean)
       setCollectedLetters(halfLetters)
+      setSkyLetters(scrambleLetters(halfLetters))
       startEndingChoreography(halfLetters)
     }
   }, [skipToEndTest, startEndingChoreography])
@@ -736,15 +748,15 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       messageEndsAt: 0,
       lastHudAt: 0,
       hasReachedCheckpoint: false,
-      cemeteryStageStarted: false,
+      museumStageStarted: false,
       freezeUntil: 0,
       eventBanner: null,
       postFreezeAction: null,
       springEventTriggered: false,
       winterEventTriggered: false,
-      cemeteryEventTriggered: false,
+      museumEventTriggered: false,
       difficulty,
-      cemeteryStart: DIFFICULTY_CONFIGS[difficulty].cemeteryStart,
+      museumStart: DIFFICULTY_CONFIGS[difficulty].museumStart,
       totalDuration: DIFFICULTY_CONFIGS[difficulty].totalDuration,
       collectedLetters: [],
     }
@@ -752,7 +764,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
     const applyDifficulty = (nextDifficulty: Difficulty) => {
       const config = DIFFICULTY_CONFIGS[nextDifficulty]
       runtime.difficulty = nextDifficulty
-      runtime.cemeteryStart = config.cemeteryStart
+      runtime.museumStart = config.museumStart
       runtime.totalDuration = config.totalDuration
     }
 
@@ -836,9 +848,9 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       entity.spin = (Math.random() - 0.5) * (kind === 'hazard' ? 1.4 : 1.2)
 
       if (kind === 'hazard') {
-        if (runtime.biome === 'cemetery') {
-          const cemeteryHazards: HazardType[] = ['tombstone', 'ghost_wisp', 'raven']
-          entity.hazardType = cemeteryHazards[Math.floor(Math.random() * cemeteryHazards.length)]
+        if (runtime.biome === 'museum') {
+          const museumHazards: HazardType[] = ['vase', 'golden_orb', 'hieroglyph_slab']
+          entity.hazardType = museumHazards[Math.floor(Math.random() * museumHazards.length)]
         } else if (runtime.biome === 'winter') {
           entity.hazardType = 'icicle'
         } else {
@@ -862,11 +874,8 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
     }
 
     const updatePlayerGraphic = () => {
-      if (runtime.biome === 'cemetery') {
-        drawBat(playerView, 58 * runtime.metrics.unit, flapPhase)
-      } else {
-        drawKite(playerView, 64 * runtime.metrics.unit)
-      }
+      // Golden Scarab is the active hero on all levels (Wiosna, Zima, Muzeum)
+      drawScarab(playerView, 62 * runtime.metrics.unit, flapPhase)
     }
 
     const applyBiome = (next: BiomeId, announce: boolean) => {
@@ -876,7 +885,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       updatePlayerGraphic()
       for (const particle of particles) {
         particle.tint =
-          next === 'spring' ? 0x81c784 : next === 'winter' ? 0xffffff : 0xab47bc
+          next === 'spring' ? 0x81c784 : next === 'winter' ? 0xffffff : 0xffd54f
       }
     }
 
@@ -889,7 +898,6 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       message('Uważaj! ♥', 950)
       if (runtime.lives <= 0) {
         runtime.state = 'gameover'
-        stopCemeteryMusic()
       }
       syncHud(true)
     }
@@ -905,16 +913,15 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
     const reset = () => {
       applyDifficulty(difficultyRef.current)
       recycleAll()
-      stopCemeteryMusic()
-      setGatesOpen(false)
-      setEnterReady(false)
+      startMuseumJazzMusic()
+      setDoorOpening(false)
       setEndingPhase('none')
       runtime.state = 'playing'
       runtime.elapsed = 0
       runtime.lives = 3
       runtime.biome = 'spring'
       runtime.hasReachedCheckpoint = false
-      runtime.cemeteryStageStarted = false
+      runtime.museumStageStarted = false
       runtime.collectedLetters = []
       runtime.spawnedLetterIndex = 0
       runtime.nextHazardAt = 1200
@@ -928,9 +935,9 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       runtime.postFreezeAction = null
       runtime.springEventTriggered = false
       runtime.winterEventTriggered = false
-      runtime.cemeteryEventTriggered = false
-      runtime.message = 'Wiosenny wiatr 🌸'
-      runtime.messageEndsAt = 1300
+      runtime.museumEventTriggered = false
+      runtime.message = 'Skarabeusz wyrusza na przygodę! 🪲'
+      runtime.messageEndsAt = 1400
       runtime.player = {
         x: runtime.metrics.width / 2,
         y: runtime.metrics.height * 0.27,
@@ -942,48 +949,12 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       syncHud(true)
     }
 
-    const resetToCheckpoint = () => {
-      applyDifficulty(difficultyRef.current)
-      recycleAll()
-      setGatesOpen(true)
-      setEnterReady(true)
-      setEndingPhase('none')
-      runtime.state = 'playing'
-      runtime.elapsed = runtime.cemeteryStart
-      runtime.lives = 3
-      runtime.biome = 'cemetery'
-      runtime.hasReachedCheckpoint = true
-      runtime.cemeteryStageStarted = true
-      runtime.nextLetterAt = runtime.cemeteryStart + 1600
-      runtime.nextHazardAt = runtime.cemeteryStart + 1400
-      runtime.nextHeartAt = Infinity
-      runtime.eventEndsAt = 0
-      runtime.eventWind = 0
-      runtime.eventLift = 0
-      runtime.freezeUntil = 0
-      runtime.eventBanner = null
-      runtime.postFreezeAction = null
-      runtime.cemeteryEventTriggered = false
-
-      runtime.player = {
-        x: runtime.metrics.width / 2,
-        y: runtime.metrics.height * 0.32,
-        vx: 0,
-        vy: -90 * runtime.metrics.yScale,
-        invulnerableUntil: runtime.cemeteryStart + 800,
-      }
-      applyBiome('cemetery', false)
-      startCemeteryMusic()
-      message('Mroczny Cmentarz! 🪦', 1500)
-      syncHud(true)
-    }
-
-    const resumeFromCheckpoint = () => {
-      if (runtime.state !== 'checkpoint') return
+    const resumeCheckpoint = () => {
       runtime.state = 'playing'
       runtime.player.vy = -180 * runtime.metrics.yScale
-      startCemeteryMusic()
-      message('Cmentarz wita nowego gościa... 🪦🦇', 1500)
+      applyBiome('museum', false)
+      startMuseumJazzMusic()
+      message('Złoty Skarabeusz wlatuje do Muzeum! 🏛️🪲', 1600)
       syncHud(true)
     }
 
@@ -1010,7 +981,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       const m = runtime.metrics
       const player = runtime.player
       const seconds = delta / 1000
-      const gravity = runtime.biome === 'winter' ? 1.12 : runtime.biome === 'cemetery' ? 0.98 : 0.94
+      const gravity = runtime.biome === 'winter' ? 1.12 : runtime.biome === 'museum' ? 0.96 : 0.92
       const damping = runtime.biome === 'winter' ? 0.975 : 0.958
       player.vy += (760 * gravity * m.yScale + runtime.eventLift) * seconds
       player.vx += (Math.sin(runtime.elapsed / 750) * 28 * m.xScale + runtime.eventWind) * seconds
@@ -1104,10 +1075,8 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       if (runtime.state !== 'playing') return
       const delta = Math.min(ticker.deltaMS, 34)
 
-      flapPhase += (delta / 1000) * 8.5
-      if (runtime.biome === 'cemetery') {
-        drawBat(playerView, 58 * runtime.metrics.unit, flapPhase)
-      }
+      flapPhase += (delta / 1000) * 9.5
+      drawScarab(playerView, 62 * runtime.metrics.unit, flapPhase)
 
       // Freeze handler for alert banners
       if (runtime.freezeUntil > runtime.elapsed) {
@@ -1128,24 +1097,22 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
 
       runtime.elapsed += delta
 
-      // Checkpoint trigger: Reaching Cemetery (stage 3) with Gothic Gate opening animation!
-      if (runtime.elapsed >= runtime.cemeteryStart && !runtime.cemeteryStageStarted) {
-        runtime.elapsed = runtime.cemeteryStart
-        runtime.cemeteryStageStarted = true
+      // ONLY ONE CHECKPOINT: Before Museum (Stage 3)
+      if (runtime.elapsed >= runtime.museumStart && !runtime.museumStageStarted) {
+        runtime.elapsed = runtime.museumStart
+        runtime.museumStageStarted = true
         runtime.hasReachedCheckpoint = true
         runtime.state = 'checkpoint'
         runtime.lives = 3
-        runtime.nextLetterAt = runtime.cemeteryStart + 1800
-        runtime.nextHazardAt = runtime.cemeteryStart + 1400
+        runtime.nextLetterAt = runtime.museumStart + 1800
+        runtime.nextHazardAt = runtime.museumStart + 1400
         runtime.nextHeartAt = Infinity
         recycleAll()
-        applyBiome('cemetery', false)
+        applyBiome('museum', false)
         runtime.player.x = runtime.metrics.width / 2
         runtime.player.y = runtime.metrics.height * 0.32
         runtime.player.vx = 0
         runtime.player.vy = 0
-        setGatesOpen(false)
-        setEnterReady(false)
         syncHud(true)
         return
       }
@@ -1168,10 +1135,10 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
         runtime.springEventTriggered = true
         runtime.eventBanner = {
           title: '🌸 WIOSENNY POWIEW! 🌸',
-          subtitle: 'Ciepły wiatr znosi latawiec w bok!',
+          subtitle: 'Ciepły wiatr znosi nas w bok!',
           type: 'gust',
         }
-        runtime.freezeUntil = runtime.elapsed + 2600
+        runtime.freezeUntil = runtime.elapsed + 2400
         runtime.postFreezeAction = () => {
           const dir = Math.random() < 0.5 ? -1 : 1
           runtime.eventWind = dir * 90 * runtime.metrics.xScale * DIFFICULTY_CONFIGS[runtime.difficulty].eventWindMultiplier
@@ -1189,7 +1156,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
           subtitle: 'Zimowy wiatr spycha w bok – uważaj na sople!',
           type: 'storm',
         }
-        runtime.freezeUntil = runtime.elapsed + 2600
+        runtime.freezeUntil = runtime.elapsed + 2400
         runtime.postFreezeAction = () => {
           const dir = Math.random() < 0.5 ? -1 : 1
           runtime.eventWind = dir * 150 * runtime.metrics.xScale * DIFFICULTY_CONFIGS[runtime.difficulty].eventWindMultiplier
@@ -1199,17 +1166,17 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
         return
       }
 
-      // Event 3: Cemetery mist (~62s)
-      if (!runtime.cemeteryEventTriggered && runtime.elapsed >= 62000 && runtime.elapsed < 76000) {
-        runtime.cemeteryEventTriggered = true
+      // Event 3: Museum golden aura (~62s)
+      if (!runtime.museumEventTriggered && runtime.elapsed >= 62000 && runtime.elapsed < 76000) {
+        runtime.museumEventTriggered = true
         runtime.eventBanner = {
-          title: '🪦 CMENTARNA MGŁA! 🪦',
-          subtitle: 'Gęsty opar i upiorny wiatr – uważaj na nagrobki i kruki!',
-          type: 'cemetery_fog',
+          title: '🏛️ ZŁOTY BLASK MUZEUM! 🏛️',
+          subtitle: 'Starożytna magia wiruje w korytarzu – uważaj na wazy i relikty!',
+          type: 'museum_light',
         }
-        runtime.freezeUntil = runtime.elapsed + 2600
+        runtime.freezeUntil = runtime.elapsed + 2400
         runtime.postFreezeAction = () => {
-          runtime.eventWind = -140 * runtime.metrics.xScale * DIFFICULTY_CONFIGS[runtime.difficulty].eventWindMultiplier
+          runtime.eventWind = -130 * runtime.metrics.xScale * DIFFICULTY_CONFIGS[runtime.difficulty].eventWindMultiplier
           runtime.eventEndsAt = runtime.elapsed + 4000 * DIFFICULTY_CONFIGS[runtime.difficulty].eventDurationMultiplier
         }
         syncHud(true)
@@ -1219,7 +1186,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       // Spawn hazards
       if (runtime.elapsed >= runtime.nextHazardAt) {
         spawn('hazard')
-        const base = runtime.biome === 'winter' ? 1050 : runtime.biome === 'cemetery' ? 1150 : 1350
+        const base = runtime.biome === 'winter' ? 1050 : runtime.biome === 'museum' ? 1150 : 1350
         runtime.nextHazardAt = runtime.elapsed + (base + Math.random() * 500) * DIFFICULTY_CONFIGS[runtime.difficulty].hazardIntervalMultiplier
       }
 
@@ -1246,64 +1213,20 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       if (runtime.state !== 'playing' || runtime.freezeUntil > runtime.elapsed) return
       runtime.player.vy = -330 * runtime.metrics.yScale
       runtime.player.vx += direction * 155 * runtime.metrics.xScale
-      if (runtime.biome === 'cemetery') {
-        playBatFlap()
-      }
-    }
-
-    const handlePointer = (x: number) => {
-      if (runtime.state === 'checkpoint') return
-      if (runtime.state === 'ready' || runtime.state === 'gameover') {
-        if (runtime.hasReachedCheckpoint && runtime.state === 'gameover') {
-          resetToCheckpoint()
-        } else {
-          reset()
-        }
-        return
-      }
-      steer(x < runtime.metrics.width / 2 ? -1 : 1)
+      playScarabFlap()
     }
 
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        controlsRef.current?.pause()
-        return
+      if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
+        event.preventDefault()
+        steer(-1)
+      } else if (event.code === 'ArrowRight' || event.code === 'KeyD') {
+        event.preventDefault()
+        steer(1)
+      } else if (event.code === 'Space') {
+        event.preventDefault()
+        steer(0 as -1 | 1 || -1)
       }
-      if (![' ', 'ArrowLeft', 'ArrowRight', 'a', 'A', 'd', 'D', 'Enter'].includes(event.key)) return
-      event.preventDefault()
-
-      if (runtime.state === 'checkpoint') return
-
-      if (runtime.state === 'ready' || runtime.state === 'gameover') {
-        if (runtime.hasReachedCheckpoint && runtime.state === 'gameover') {
-          resetToCheckpoint()
-        } else {
-          reset()
-        }
-        return
-      }
-      if (runtime.state !== 'playing' || runtime.freezeUntil > runtime.elapsed) return
-      runtime.player.vy = -330 * runtime.metrics.yScale
-      if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'A') {
-        runtime.player.vx -= 155 * runtime.metrics.xScale
-        if (runtime.biome === 'cemetery') playBatFlap()
-      }
-      if (event.key === 'ArrowRight' || event.key === 'd' || event.key === 'D') {
-        runtime.player.vx += 155 * runtime.metrics.xScale
-        if (runtime.biome === 'cemetery') playBatFlap()
-      }
-    }
-
-    controlsRef.current = {
-      start: reset,
-      startCheckpoint: resetToCheckpoint,
-      resumeCheckpoint: resumeFromCheckpoint,
-      pause: () => {
-        if (runtime.state === 'playing') runtime.state = 'paused'
-        else if (runtime.state === 'paused') runtime.state = 'playing'
-        syncHud(true)
-      },
-      steer,
     }
 
     const init = async () => {
@@ -1311,42 +1234,57 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
         const nextApp = new Application()
         await nextApp.init({
           resizeTo: host,
-          preference: 'webgl',
+          backgroundColor: 0x2a1e12,
           antialias: true,
           autoDensity: true,
-          resolution: Math.min(window.devicePixelRatio || 1, 2),
-          sharedTicker: false,
-          backgroundAlpha: 1,
-          eventFeatures: { move: false, globalMove: false, click: true, wheel: false },
+          resolution: window.devicePixelRatio || 1,
         })
         if (disposed) {
-          nextApp.destroy({ removeView: true, releaseGlobalResources: true }, { children: true, texture: true, textureSource: true })
+          nextApp.destroy()
           return
         }
-
         app = nextApp
-        app.canvas.classList.add('veil-pixi-canvas')
+        host.innerHTML = ''
         host.appendChild(app.canvas)
-        app.stage.addChild(backdrop, particleLayer, itemLayer, hazardLayer, playerLayer)
         playerLayer.addChild(playerView)
-        app.stage.eventMode = 'static'
-        app.stage.interactiveChildren = false
-        app.stage.on('pointerdown', (event: any) => handlePointer(event.global.x))
 
-        for (let index = 0; index < 20; index += 1) {
-          const particle = new Graphics().circle(0, 0, 1.5 + (index % 3)).fill({ color: 0x81c784, alpha: 0.35 })
-          particle.position.set((index * 47) % runtime.metrics.width, (index * 83) % runtime.metrics.height)
-          particles.push(particle)
+        for (let i = 0; i < 28; i += 1) {
+          const particle = new Graphics()
+          particle.circle(0, 0, 1.8 + (i % 3) * 0.9).fill(0xffffff)
+          particle.alpha = 0.25 + (i % 5) * 0.12
+          particle.position.set(Math.random() * host.clientWidth, Math.random() * host.clientHeight)
           particleLayer.addChild(particle)
+          particles.push(particle)
+        }
+
+        app.stage.addChild(backdrop, particleLayer, hazardLayer, itemLayer, playerLayer)
+        controlsRef.current = {
+          start: reset,
+          resumeCheckpoint,
+          pause: () => {
+            if (runtime.state === 'playing') {
+              runtime.state = 'paused'
+              syncHud(true)
+            } else if (runtime.state === 'paused') {
+              runtime.state = 'playing'
+              startMuseumJazzMusic()
+              syncHud(true)
+            }
+          },
+          skip: () => {
+            runtime.state = 'ending'
+            runtime.message = null
+            syncHud(true)
+          },
+          steer,
+          getCollectedLetters: () => runtime.collectedLetters,
         }
 
         layout()
-        tickerUpdate = tick
+        tickerUpdate = (ticker) => tick(ticker)
         app.ticker.add(tickerUpdate)
-        resizeObserver = new ResizeObserver(() => {
-          app?.resize()
-          layout()
-        })
+
+        resizeObserver = new ResizeObserver(() => layout())
         resizeObserver.observe(host)
         window.addEventListener('keydown', handleKey)
       } catch (initError) {
@@ -1358,7 +1296,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
     void init()
     return () => {
       disposed = true
-      stopCemeteryMusic()
+      stopMuseumJazzMusic()
       resizeObserver?.disconnect()
       window.removeEventListener('keydown', handleKey)
       controlsRef.current = null
@@ -1381,9 +1319,21 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
   const biomes = getBiomesForDifficulty(difficulty)
   const stageLabel = biomes.find((item) => item.id === biome)?.label ?? biomes[0].label
 
-  // Split tiles for word 1 (0..5) and word 2 (6..11)
-  const word1Tiles = endingTiles.slice(0, 6)
-  const word2Tiles = endingTiles.slice(6, 12)
+  // Random trajectory presets for each of the 12 flying letters
+  const FLIGHT_PATHS = [
+    { startX: -140, startY: -90, midX: -60, midY: -160, rot: -35 },
+    { startX: -90, startY: -130, midX: -20, midY: -190, rot: 25 },
+    { startX: -150, startY: -40, midX: -80, midY: -120, rot: -45 },
+    { startX: -10, startY: -150, midX: 40, midY: -210, rot: 30 },
+    { startX: 80, startY: -140, midX: 120, midY: -180, rot: -20 },
+    { startX: 140, startY: -90, midX: 160, midY: -140, rot: 40 },
+    { startX: -130, startY: 30, midX: -110, midY: -70, rot: -30 },
+    { startX: -80, startY: -110, midX: -40, midY: -150, rot: 20 },
+    { startX: 30, startY: -160, midX: -20, midY: -200, rot: -25 },
+    { startX: 120, startY: -40, midX: 90, midY: -110, rot: 35 },
+    { startX: 90, startY: -110, midX: 50, midY: -170, rot: -15 },
+    { startX: 150, startY: 20, midX: 110, midY: -60, rot: 45 },
+  ]
 
   return (
     <div className="veil-game-wrapper">
@@ -1424,15 +1374,15 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
         <span className="game-letter-counter">
           ✨ {collectedLetters.length}/12
         </span>
-        <span className="game-goal-icon">🪦</span>
+        <span className="game-goal-icon">🏛️</span>
       </div>
 
-      {/* Scrambled collected letters shelf around the top/border of the playfield */}
+      {/* Collected letters shelf */}
       <div className="game-letters-shelf" aria-label="Zebrane litery w locie">
         <span className="letters-shelf-title">Zebrane litery:</span>
         <div className="letters-shelf-chips">
           {collectedLetters.length === 0 ? (
-            <span className="shelf-empty-hint">Łap spadające runy z literami!</span>
+            <span className="shelf-empty-hint">Łap złote runy z literami!</span>
           ) : (
             collectedLetters.map((item, idx) => (
               <span key={`${item.id}-${idx}`} className="letter-shelf-chip pop-in">
@@ -1494,15 +1444,27 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
           </div>
         )}
 
-        {/* Initial Ready Overlay */}
+        {/* Ekran Startowy gry */}
         {gameState === 'ready' && !error && (
           <div className="game-overlay">
             <div className="game-modal-card">
-              <div className="kite-avatar-icon">🪁</div>
-              <h3 className="modal-heading">Utrzymaj lot i odkryj hasło!</h3>
+              <div className="modal-top-corner-actions">
+                <button
+                  type="button"
+                  className="game-audio-btn modal-audio-btn"
+                  onClick={handleToggleSound}
+                  aria-label={soundMuted ? 'Włącz dźwięk' : 'Wycisz dźwięk'}
+                  title={soundMuted ? 'Włącz dźwięk' : 'Wycisz dźwięk'}
+                >
+                  {soundMuted ? '🔇' : '🔊'}
+                </button>
+              </div>
+
+              <div className="scarab-avatar-icon">🪲✨</div>
+              <h3 className="modal-heading">Skarabeusz musi dostać się do muzeum, wyruszmy na przygodę!</h3>
               <p className="modal-text">
-                Steruj za pomocą strzałek lub dotykając lewej/prawej strony ekranu.
-                Omijaj przeszkody i zbieraj litery tajemniczego hasła!
+                Steruj za pomocą strzałek lub tapując lewą/prawą stronę ekranu.
+                Omijaj przeszkody, zbieraj złote runy z literami i otwórz pradawny sarkofag!
               </p>
 
               <div className="game-difficulty-selector" aria-label="Wybór poziomu trudności">
@@ -1534,108 +1496,92 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
                 <span>{DIFFICULTY_CONFIGS[difficulty].description}</span>
               </div>
 
-              <button type="button" className="game-primary-btn" onClick={startGame}>
-                Rozpocznij lot 🪁
-              </button>
+              <div className="modal-actions-column">
+                <button type="button" className="game-primary-btn" onClick={startGame}>
+                  Wyruszmy na przygodę 🪲
+                </button>
+                <button type="button" className="game-skip-btn" onClick={handleSkipGame}>
+                  Pomiń grę ⏭️
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* 3D Cemetery Gate Transition to Stage 3 */}
+        {/* JEDYNY Checkpoint: Wejście do Muzeum ze zdjęciem muzeum-wejscie.png */}
         {gameState === 'checkpoint' && (
-          <div className="game-overlay cemetery-gate-overlay" onClick={(e) => e.stopPropagation()}>
-            <div className="door-cinematic-card cemetery-cinematic-card">
-              <span className="checkpoint-badge cemetery-badge">Checkpoint • Brama Cmentarza 🪦</span>
+          <div className="game-overlay museum-entrance-overlay" onClick={(e) => e.stopPropagation()}>
+            {/* Otwierające się drzwi i ściemnienie ekranu */}
+            <div className={`museum-cinematic-doors ${doorOpening ? 'doors-open-anim' : ''}`}>
+              <div className="museum-door-leaf leaf-left" />
+              <div className="museum-door-leaf leaf-right" />
+              <div className="screen-dark-fade" />
+            </div>
 
-              <div className="cemetery-gate-stage">
-                <div className={`cemetery-mist-interior ${gatesOpen ? 'active' : ''}`}>
-                  <div className="mist-fog-cloud fog-1" />
-                  <div className="mist-fog-cloud fog-2" />
-                  <div className="cemetery-full-moon-mini" />
-                  <div className="flying-bats-swarm">
-                    <span className="fbs b1">🦇</span>
-                    <span className="fbs b2">🦇</span>
-                    <span className="fbs b3">🦇</span>
-                  </div>
-                  {gatesOpen && <div className="flying-player-bat">🦇</div>}
-                </div>
-
-                <div className="cemetery-gate-frame">
-                  <div className="gate-pillar pillar-left">
-                    <div className="pillar-spire" />
-                  </div>
-                  <div className={`cemetery-gate-wing gate-left-wing ${gatesOpen ? 'opened' : ''}`}>
-                    <div className="iron-bars" />
-                    <div className="iron-cross-crest" />
-                  </div>
-                  <div className={`cemetery-gate-wing gate-right-wing ${gatesOpen ? 'opened' : ''}`}>
-                    <div className="iron-bars" />
-                    <div className="iron-cross-crest" />
-                  </div>
-                  <div className="gate-pillar pillar-right">
-                    <div className="pillar-spire" />
-                  </div>
-                </div>
+            <div className="museum-entrance-card">
+              <span className="checkpoint-badge museum-badge">Checkpoint • Wrota Muzeum 🏛️</span>
+              <div className="museum-image-wrapper">
+                <img
+                  src="/muzeum-wejscie.png"
+                  alt="Wejście do Muzeum Tajemnic"
+                  className="museum-entrance-img"
+                />
               </div>
 
-              {!gatesOpen ? (
-                <>
-                  <h3 className="modal-heading door-title cemetery-title">
-                    Brama Zapomnianego Cmentarza... 🪦
-                  </h3>
-                  <p className="modal-text">
-                    Zimowy mróz ustąpił przed gęstą mgłą. Co czeka za starymi żelaznymi kratami?
-                  </p>
-                  <button
-                    type="button"
-                    className="game-primary-btn cemetery-action-btn"
-                    onClick={handleOpenGates}
-                  >
-                    Otwórz bramę 🗝️
-                  </button>
-                </>
-              ) : (
-                <>
-                  <h3 className="modal-heading door-title cemetery-welcome-title">
-                    Transformacja w Nietoperza! 🦇
-                  </h3>
-                  <p className="modal-text">
-                    Życia odnowione! Zmień postać w nietoperza, unikaj nagrobków, upiornych ogników i zbierz ostatnie litery!
-                  </p>
-                  <button
-                    type="button"
-                    className="game-primary-btn cemetery-action-btn cemetery-enter-btn"
-                    disabled={!enterReady}
-                    onClick={resumeCheckpoint}
-                  >
-                    Wlatujemy! 🦇
-                  </button>
-                </>
-              )}
+              <h3 className="modal-heading museum-title">Dotarłaś do muzeum</h3>
+              <p className="modal-text museum-text">
+                Wiosenny wiatr i zimowy mróz pokonane! Przed Tobą wejście do Muzeum Tajemnic. W środku gra jazzowa muzyka, a w głębi komnat czeka złoty sarkofag!
+              </p>
+
+              <div className="modal-actions-column">
+                <button
+                  type="button"
+                  className="game-primary-btn museum-enter-btn"
+                  onClick={handleEnterMuseum}
+                  disabled={doorOpening}
+                >
+                  Wejdź 🗝️
+                </button>
+                <button
+                  type="button"
+                  className="game-skip-btn"
+                  onClick={handleSkipGame}
+                  disabled={doorOpening}
+                >
+                  Pomiń grę ⏭️
+                </button>
+              </div>
             </div>
           </div>
         )}
 
+        {/* Pauza */}
         {gameState === 'paused' && (
           <div className="game-overlay">
             <div className="game-modal-card">
               <h3 className="modal-heading">Pauza</h3>
-              <p className="modal-text">Złap oddech i przygotuj się na kolejny etap.</p>
-              <button type="button" className="game-primary-btn" onClick={togglePause}>
-                Wznów
-              </button>
+              <p className="modal-text">Złap oddech i przygotuj się na kolejny etap przygody.</p>
+              <div className="modal-actions-column">
+                <button type="button" className="game-primary-btn" onClick={togglePause}>
+                  Wznów grę
+                </button>
+                <button type="button" className="game-skip-btn" onClick={handleSkipGame}>
+                  Pomiń grę ⏭️
+                </button>
+              </div>
             </div>
           </div>
         )}
 
+        {/* Game Over */}
         {gameState === 'gameover' && (
           <div className="game-overlay">
             <div className="game-modal-card">
               <h3 className="modal-heading">Koniec lotu!</h3>
               <p className="modal-text">
                 {hasCheckpoint
-                  ? 'Możesz wznowić grę bezpośrednio od Bramy Cmentarza.'
-                  : 'Złap serduszko po zderzeniu i leć dalej.'}
+                  ? 'Możesz wznowić grę bezpośrednio od wejścia do Muzeum!'
+                  : 'Skarabeusz może spróbować ponownie od początku.'}
               </p>
 
               <div className="game-difficulty-selector gameover-difficulty-selector" aria-label="Zmień poziom trudności">
@@ -1660,126 +1606,232 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
                 </div>
               </div>
 
-              {hasCheckpoint ? (
-                <div className="modal-actions-column">
-                  <button type="button" className="game-primary-btn" onClick={restartFromCheckpoint}>
-                    Wróć na cmentarz 🪦🦇
+              <div className="modal-actions-column">
+                {hasCheckpoint ? (
+                  <>
+                    <button type="button" className="game-primary-btn" onClick={() => controlsRef.current?.resumeCheckpoint()}>
+                      Wróć do Muzeum 🏛️
+                    </button>
+                    <button type="button" className="game-subtle-btn" onClick={startGame}>
+                      Od początku 🪲
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" className="game-primary-btn" onClick={startGame}>
+                    Spróbuj ponownie ↺
                   </button>
-                  <button type="button" className="game-subtle-btn" onClick={startGame}>
-                    Od samego początku 🌸
-                  </button>
-                </div>
-              ) : (
-                <button type="button" className="game-primary-btn" onClick={startGame}>
-                  Zagraj ponownie 🪁
+                )}
+                <button type="button" className="game-skip-btn" onClick={handleSkipGame}>
+                  Pomiń grę ⏭️
                 </button>
-              )}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Finałowa sekwencja: Animacja Kosy + "Koniec upiorności" + "Twój wynik" + Zmiana miejsc liter */}
+        {/* Finałowa sekwencja: Strażnik Sarkofagu + Zagadka Hot Twórcy + Otwarcie Sarkofagu 3D + Chmura Liter i Losowy Wlot */}
         {gameState === 'ending' && endingPhase !== 'none' && (
-          <div className="game-overlay scythe-ending-overlay" onClick={(e) => e.stopPropagation()}>
-            {/* Scythe Slash Layer - Slower & Visible with "Koniec upiorności" */}
-            {endingPhase === 'scythe' && (
-              <div className="scythe-cinematic-stage">
-                <div className="scythe-koniec-title">Koniec upiorności</div>
-                <div className="scythe-slash-fx">
-                  <div className="scythe-blade-visual">
-                    <svg viewBox="0 0 200 200" className="scythe-svg">
-                      <path
-                        d="M 30 180 Q 80 100 160 30"
-                        stroke="#4e342e"
-                        strokeWidth="9"
-                        strokeLinecap="round"
-                        fill="none"
-                      />
-                      <circle cx="160" cy="30" r="7" fill="#b0bec5" stroke="#37474f" strokeWidth="2" />
-                      <path
-                        d="M 160 30 C 145 5, 80 10, 30 65 C 75 52, 130 42, 160 30 Z"
-                        fill="url(#scytheBladeGrad)"
-                        stroke="#eceff1"
-                        strokeWidth="2.5"
-                        strokeLinejoin="round"
-                      />
-                      <defs>
-                        <linearGradient id="scytheBladeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#ffffff" />
-                          <stop offset="45%" stopColor="#cfd8dc" />
-                          <stop offset="100%" stopColor="#546e7a" />
-                        </linearGradient>
-                      </defs>
+          <div className="game-overlay sarcophagus-ending-overlay" onClick={(e) => e.stopPropagation()}>
+            {/* Faza 1: Pytanie Strażnika Sarkofagu */}
+            {(endingPhase === 'guardian_question' || endingPhase === 'guardian_wrong' || endingPhase === 'guardian_correct') && (
+              <div className={`guardian-dialogue-stage ${endingPhase === 'guardian_wrong' ? 'shake-wrong' : ''}`}>
+                <div className="guardian-visual">
+                  <div className="guardian-avatar">
+                    <svg viewBox="0 0 120 120" className="guardian-svg">
+                      {/* Pharaoh Nemes Headdress */}
+                      <path d="M 20 60 Q 60 10 100 60 L 95 95 L 80 85 L 60 92 L 40 85 L 25 95 Z" fill="#d4af37" stroke="#ffd54f" strokeWidth="2.5" />
+                      <path d="M 30 50 Q 60 25 90 50" stroke="#1565c0" strokeWidth="4" fill="none" />
+                      <path d="M 28 65 Q 60 40 92 65" stroke="#1565c0" strokeWidth="4" fill="none" />
+                      <ellipse cx="60" cy="62" rx="22" ry="24" fill="#e0a96d" stroke="#b37d47" strokeWidth="1.5" />
+                      <path d="M 46 58 Q 52 54 58 58 Q 52 61 46 58 Z" fill="#111" />
+                      <path d="M 62 58 Q 68 54 74 58 Q 68 61 62 58 Z" fill="#111" />
+                      <path d="M 43 57 L 58 57 L 60 62" stroke="#111" strokeWidth="1.5" fill="none" />
+                      <path d="M 77 57 L 62 57 L 60 62" stroke="#111" strokeWidth="1.5" fill="none" />
+                      <path d="M 60 60 L 58 68 L 62 68" stroke="#a06838" strokeWidth="1.5" fill="none" />
+                      <path d="M 52 74 Q 60 78 68 74" stroke="#794628" strokeWidth="1.8" fill="none" />
+                      <rect x="56" y="80" width="8" height="22" rx="3" fill="#ffd700" stroke="#b78103" strokeWidth="1.5" />
+                      <circle cx="60" cy="30" r="6" fill="#00bcd4" stroke="#ffd700" strokeWidth="1.5" />
+                      <circle cx="60" cy="30" r="2.5" fill="#d50000" />
                     </svg>
                   </div>
-                  <div className="scythe-slash-line" />
+                  <span className="guardian-name-badge">Strażnik Sarkofagu</span>
+                </div>
+
+                <div className="guardian-speech-card">
+                  <p className="guardian-question-text">
+                    „Aby otworzyć pradawny sarkofag, musisz odpowiedzieć na jedno pytanie:
+                    <br />
+                    <strong>Jak bardzo hot jest twórca tej gry?</strong>”
+                  </p>
+
+                  {guardianMessage && (
+                    <div className={`guardian-feedback-msg ${endingPhase === 'guardian_correct' ? 'msg-correct' : 'msg-wrong'}`}>
+                      {guardianMessage}
+                    </div>
+                  )}
+
+                  <div className="hot-scale-picker" role="radiogroup" aria-label="Ocena w skali 1 do 10">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((val) => (
+                      <button
+                        key={val}
+                        type="button"
+                        className={`hot-scale-btn ${selectedHotValue === val ? 'btn-selected' : ''}`}
+                        onClick={() => handleAnswerHotQuestion(val)}
+                        disabled={endingPhase === 'guardian_correct'}
+                      >
+                        {val}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Revealed Result Screen: ONLY "Twój wynik" and the 12 slots */}
-            {endingPhase !== 'scythe' && (
-              <div className="phrase-reveal-card">
-                <h2 className="twoj-wynik-title">Twój wynik</h2>
-
-                <div className="phrase-reveal-container">
-                  {/* Word 1: Slots 0..5 */}
-                  <div className="phrase-word word-1">
-                    {word1Tiles.map((tile, idx) => {
-                      const isSwapping = activeSwappingIds.includes(tile.id)
-                      const isVisible =
-                        tile.isCollected ||
-                        endingPhase === 'dropped_grayout' ||
-                        endingPhase === 'swapping' ||
-                        endingPhase === 'solved'
-
-                      return (
-                        <div key={`w1-slot-${idx}`} className="letter-slot">
-                          {isVisible && (
-                            <span
-                              className={`slot-letter ${
-                                tile.isCollected ? 'letter-collected' : 'letter-grayout'
-                              } ${isSwapping ? 'is-swapping' : ''}`}
-                            >
-                              {tile.char}
-                            </span>
-                          )}
-                        </div>
-                      )
-                    })}
+            {/* Faza 2 & 3: Sarkofag 3D + Chmura Wiszących Liter w Powietrzu + Powolny Losowy Wlot */}
+            {(endingPhase === 'sarcophagus_opening' || endingPhase === 'flying_letters' || endingPhase === 'complete') && (
+              <div className="sarcophagus-cinematic-stage">
+                <div className="sarcophagus-header">
+                  <div className="sarcophagus-score-pill">
+                    <span className="score-icon">📜</span>
+                    <span className="score-text">
+                      Zebrane litery: <strong>{collectedLetters.length} / 12</strong>
+                    </span>
                   </div>
+                  <span className="sarcophagus-stage-badge">Złoty Sarkofag Faraona ✨</span>
+                  <h2 className="sarcophagus-title">
+                    {endingPhase === 'complete' ? 'Hasło Odkryte!' : 'Sarkofag staje otworem...'}
+                  </h2>
+                  <p className="sarcophagus-flight-info-banner">
+                    {endingPhase === 'complete'
+                      ? 'Wszystkie złote litery połączyły się w proroctwo!'
+                      : '✨ Twoje zebrane litery unoszą się w powietrzu i wlatują do sarkofagu! ✨'}
+                  </p>
+                </div>
 
-                  <div className="phrase-word-gap" />
+                {/* Chmurka liter wiszących w powietrzu przed przelotem (w losowym układzie) */}
+                {endingPhase !== 'complete' && (
+                  <div className="floating-letters-sky-cluster">
+                    <span className="sky-cluster-label">
+                      Zdobyte litery w powietrzu ({collectedLetters.length}/12):
+                    </span>
+                    <div className="sky-cluster-chips">
+                      {skyLetters.length === 0 ? (
+                        <span className="sky-empty-hint">Brak zdobytych liter – sarkofag sam uzupełni runy</span>
+                      ) : (
+                        skyLetters.map((item, idx) => {
+                          const hasFlown = placedCollectedIds.includes(item.id)
+                          const isCurrentlyFlying = activeFlyingId === item.id
 
-                  {/* Word 2: Slots 6..11 */}
-                  <div className="phrase-word word-2">
-                    {word2Tiles.map((tile, idx) => {
-                      const isSwapping = activeSwappingIds.includes(tile.id)
-                      const isVisible =
-                        tile.isCollected ||
-                        endingPhase === 'dropped_grayout' ||
-                        endingPhase === 'swapping' ||
-                        endingPhase === 'solved'
-
-                      return (
-                        <div key={`w2-slot-${idx}`} className="letter-slot">
-                          {isVisible && (
-                            <span
-                              className={`slot-letter ${
-                                tile.isCollected ? 'letter-collected' : 'letter-grayout'
-                              } ${isSwapping ? 'is-swapping' : ''}`}
+                          return (
+                            <div
+                              key={`sky-${item.id}-${idx}`}
+                              className={`sky-letter-chip chip-gold ${hasFlown ? 'chip-departed' : ''} ${isCurrentlyFlying ? 'chip-launching' : ''}`}
+                              style={{ animationDelay: `${(idx % 5) * 0.22}s` }}
                             >
-                              {tile.char}
-                            </span>
-                          )}
+                              {item.char}
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Widok Sarkofagu w 3D */}
+                <div className="sarcophagus-3d-wrapper">
+                  <div className={`sarcophagus-3d-box ${endingPhase !== 'sarcophagus_opening' ? 'lid-opened' : ''} ${isFlashing ? 'sarcophagus-flashing' : ''}`}>
+                    {/* Złote wieko sarkofagu */}
+                    <div className="sarcophagus-lid">
+                      <div className="lid-pharaoh-face">👑</div>
+                      <div className="lid-gold-ornament" />
+                    </div>
+
+                    {/* Wnętrze sarkofagu ze slotami na litery */}
+                    <div className="sarcophagus-interior">
+                      <div className="sarcophagus-glow-aura" />
+
+                      <div className="sarcophagus-words-container">
+                        {/* Word 1: JESTEŚ (slots 0..5) */}
+                        <div className="sarcophagus-word word-1">
+                          {SECRET_LETTERS.slice(0, 6).map((letter, idx) => {
+                            const isPlaced = placedCollectedIds.includes(letter.id)
+                            const p = FLIGHT_PATHS[idx]
+
+                            return (
+                              <div key={letter.id} className="sarcophagus-slot">
+                                {isPlaced ? (
+                                  <span
+                                    className="slot-gold-letter letter-was-collected dynamic-swoop-in"
+                                    style={{
+                                      ['--start-x' as string]: `${p.startX}px`,
+                                      ['--start-y' as string]: `${p.startY}px`,
+                                      ['--mid-x' as string]: `${p.midX}px`,
+                                      ['--mid-y' as string]: `${p.midY}px`,
+                                      ['--rot' as string]: `${p.rot}deg`,
+                                    }}
+                                  >
+                                    {letter.char}
+                                  </span>
+                                ) : showGrayout ? (
+                                  <span
+                                    className="slot-gold-letter letter-grayout scale-up-reveal"
+                                    style={{ animationDelay: `${(idx % 6) * 0.08}s` }}
+                                  >
+                                    {letter.char}
+                                  </span>
+                                ) : null}
+                              </div>
+                            )
+                          })}
                         </div>
-                      )
-                    })}
+
+                        <div className="sarcophagus-word-divider" />
+
+                        {/* Word 2: SŁODKA (slots 6..11) */}
+                        <div className="sarcophagus-word word-2">
+                          {SECRET_LETTERS.slice(6, 12).map((letter, idx) => {
+                            const slotGlobalIndex = 6 + idx
+                            const isPlaced = placedCollectedIds.includes(letter.id)
+                            const p = FLIGHT_PATHS[slotGlobalIndex]
+
+                            return (
+                              <div key={letter.id} className="sarcophagus-slot">
+                                {isPlaced ? (
+                                  <span
+                                    className="slot-gold-letter letter-was-collected dynamic-swoop-in"
+                                    style={{
+                                      ['--start-x' as string]: `${p.startX}px`,
+                                      ['--start-y' as string]: `${p.startY}px`,
+                                      ['--mid-x' as string]: `${p.midX}px`,
+                                      ['--mid-y' as string]: `${p.midY}px`,
+                                      ['--rot' as string]: `${p.rot}deg`,
+                                    }}
+                                  >
+                                    {letter.char}
+                                  </span>
+                                ) : showGrayout ? (
+                                  <span
+                                    className="slot-gold-letter letter-grayout scale-up-reveal"
+                                    style={{ animationDelay: `${(idx % 6) * 0.08}s` }}
+                                  >
+                                    {letter.char}
+                                  </span>
+                                ) : null}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {endingPhase === 'solved' && (
-                  <div className="phrase-complete-footer">
+                {endingPhase === 'complete' && (
+                  <div className="sarcophagus-celebration-footer">
+                
+                    <div className="sarcophagus-final-count-badge">
+                      🏆 Zdobyłaś <strong>{collectedLetters.length} / 12</strong> liter na poziomie {DIFFICULTY_CONFIGS[difficulty].label}!
+                    </div>
                     <button
                       type="button"
                       className="btn btn-tak btn-kontynuujmy"
