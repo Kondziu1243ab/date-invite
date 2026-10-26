@@ -2997,9 +2997,9 @@
   transform-origin: center center;
 }
 
-/* Expanding scale transition for missing runes */
+/* Expanding scale transition for missing runes (slower, smoother, more majestic) */
 .slot-gold-letter.scale-up-reveal {
-  animation: grayout-scale-up-reveal 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+  animation: grayout-scale-up-reveal 1.05s cubic-bezier(0.18, 0.85, 0.32, 1.2) both;
 }
 
 @keyframes grayout-scale-up-reveal {
@@ -3009,7 +3009,7 @@
     filter: blur(4px);
   }
   65% {
-    transform: scale(1.18);
+    transform: scale(1.16);
     opacity: 0.85;
     filter: blur(0px);
   }
@@ -3020,9 +3020,9 @@
   }
 }
 
-/* Slow, randomized, curved trajectory flight into slot */
+/* Slower, graceful, randomized curved trajectory flight into slot */
 .dynamic-swoop-in {
-  animation: dynamic-curved-flight 0.72s cubic-bezier(0.2, 0.85, 0.28, 1.15) forwards;
+  animation: dynamic-curved-flight 1.15s cubic-bezier(0.25, 0.82, 0.35, 1.08) forwards;
 }
 
 @keyframes dynamic-curved-flight {

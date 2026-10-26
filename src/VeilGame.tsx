@@ -603,44 +603,57 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
         // Jeśli nie było zebranych liter, po chwili błysk i zarysowanie szarych liter w pustych slotach
         setTimeout(() => {
           setIsFlashing(true)
-          setShowGrayout(true)
+          setTimeout(() => {
+            setShowGrayout(true)
+          }, 250)
           setTimeout(() => {
             setIsFlashing(false)
             setEndingPhase('complete')
-          }, 950)
+          }, 1500)
         }, 900)
         return
       }
 
-      let idx = 0
-      const interval = window.setInterval(() => {
-        if (idx < scrambled.length) {
-          const currentItem = scrambled[idx]
-          setActiveFlyingId(currentItem.id)
-          idx += 1
+      // Sekwencja: każda zdobyta litera po kolei wlatuje i ląduje w swoim gnieździe
+      const flyNextLetter = (index: number) => {
+        if (index >= scrambled.length) {
+          // WSZYSTKIE zdobyte litery są już włożone i siedzą na swoich miejscach!
+          setActiveFlyingId(null)
 
-          // Litera dokuje w swoim dedykowanym gnieździe w sarkofagu (bez żadnych drażniących dźwięków - gra tylko płynny jazz)
+          // Czekamy (puste sloty pozostają całkowicie puste), aż użytkownik zobaczy wszystkie swoje litery
           setTimeout(() => {
-            setPlacedCollectedIds((prev) => [...prev, currentItem.id])
-          }, 480)
+            // Dopiero TERAZ: błysk sarkofagu
+            setIsFlashing(true)
 
-          // Po włożeniu wszystkich zebranych liter:
-          if (idx >= scrambled.length) {
-            clearInterval(interval)
+            // I w trakcie błysku w pustych otworach zarysowują się szare litery
             setTimeout(() => {
-              setActiveFlyingId(null)
-              // Błysk sarkofagu i płynne powiększenie szarych brakujących liter w pustych otworach
-              setIsFlashing(true)
               setShowGrayout(true)
+            }, 300)
 
-              setTimeout(() => {
-                setIsFlashing(false)
-                setEndingPhase('complete')
-              }, 1000)
-            }, 850)
-          }
+            setTimeout(() => {
+              setIsFlashing(false)
+              setEndingPhase('complete')
+            }, 1600)
+          }, 1000)
+          return
         }
-      }, 680)
+
+        const currentItem = scrambled[index]
+        // 1. Litera zaczyna lot z chmurki do swojego dedykowanego slotu w sarkofagu
+        setActiveFlyingId(currentItem.id)
+
+        // 2. Po zakończeniu animacji lotu (~1150ms) litera na stałe dokuje w slocie
+        setTimeout(() => {
+          setPlacedCollectedIds((prev) => [...prev, currentItem.id])
+
+          // 3. Krótka naturalna pauza przed wylotem kolejnej litery (350ms)
+          setTimeout(() => {
+            flyNextLetter(index + 1)
+          }, 350)
+        }, 1150)
+      }
+
+      flyNextLetter(0)
     }, 1200)
   }, [collectedLetters])
 
@@ -1209,7 +1222,11 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       syncHud()
     }
 
+    let lastSteerTime = 0
     const steer = (direction: -1 | 1) => {
+      const now = performance.now()
+      if (now - lastSteerTime < 50) return // Zapobiega podwójnemu wywołaniu w tej samej klatce
+      lastSteerTime = now
       if (runtime.state !== 'playing' || runtime.freezeUntil > runtime.elapsed) return
       runtime.player.vy = -330 * runtime.metrics.yScale
       runtime.player.vx += direction * 155 * runtime.metrics.xScale
@@ -1229,6 +1246,14 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       }
     }
 
+    // Dotyk / kliknięcie w lewą lub prawą połowę ekranu telefonu / planszy
+    const handleHostPointer = (e: PointerEvent) => {
+      if (runtime.state !== 'playing' || runtime.freezeUntil > runtime.elapsed) return
+      const rect = host.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      steer(x < rect.width / 2 ? -1 : 1)
+    }
+
     const init = async () => {
       try {
         const nextApp = new Application()
@@ -1238,12 +1263,14 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
           antialias: true,
           autoDensity: true,
           resolution: window.devicePixelRatio || 1,
+          eventFeatures: { move: false, globalMove: false, click: true, wheel: false },
         })
         if (disposed) {
           nextApp.destroy()
           return
         }
         app = nextApp
+        app.canvas.classList.add('veil-pixi-canvas')
         host.innerHTML = ''
         host.appendChild(app.canvas)
         playerLayer.addChild(playerView)
@@ -1258,6 +1285,17 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
         }
 
         app.stage.addChild(backdrop, particleLayer, hazardLayer, itemLayer, playerLayer)
+        app.stage.eventMode = 'static'
+        app.stage.interactiveChildren = false
+        app.stage.hitArea = new Rectangle(0, 0, 10000, 10000)
+        app.stage.on('pointerdown', (event) => {
+          if (runtime.state !== 'playing' || runtime.freezeUntil > runtime.elapsed) return
+          const isLeft = event.global.x < runtime.metrics.width / 2
+          steer(isLeft ? -1 : 1)
+        })
+
+        host.addEventListener('pointerdown', handleHostPointer)
+
         controlsRef.current = {
           start: reset,
           resumeCheckpoint,
@@ -1297,6 +1335,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
     return () => {
       disposed = true
       stopMuseumJazzMusic()
+      host.removeEventListener('pointerdown', handleHostPointer)
       resizeObserver?.disconnect()
       window.removeEventListener('keydown', handleKey)
       controlsRef.current = null
@@ -1755,13 +1794,14 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
                         <div className="sarcophagus-word word-1">
                           {SECRET_LETTERS.slice(0, 6).map((letter, idx) => {
                             const isPlaced = placedCollectedIds.includes(letter.id)
+                            const isFlying = activeFlyingId === letter.id
                             const p = FLIGHT_PATHS[idx]
 
                             return (
                               <div key={letter.id} className="sarcophagus-slot">
-                                {isPlaced ? (
+                                {isFlying || isPlaced ? (
                                   <span
-                                    className="slot-gold-letter letter-was-collected dynamic-swoop-in"
+                                    className={`slot-gold-letter letter-was-collected ${isFlying ? 'dynamic-swoop-in' : 'letter-settled'}`}
                                     style={{
                                       ['--start-x' as string]: `${p.startX}px`,
                                       ['--start-y' as string]: `${p.startY}px`,
@@ -1775,7 +1815,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
                                 ) : showGrayout ? (
                                   <span
                                     className="slot-gold-letter letter-grayout scale-up-reveal"
-                                    style={{ animationDelay: `${(idx % 6) * 0.08}s` }}
+                                    style={{ animationDelay: `${(idx % 6) * 0.12}s` }}
                                   >
                                     {letter.char}
                                   </span>
@@ -1792,13 +1832,14 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
                           {SECRET_LETTERS.slice(6, 12).map((letter, idx) => {
                             const slotGlobalIndex = 6 + idx
                             const isPlaced = placedCollectedIds.includes(letter.id)
+                            const isFlying = activeFlyingId === letter.id
                             const p = FLIGHT_PATHS[slotGlobalIndex]
 
                             return (
                               <div key={letter.id} className="sarcophagus-slot">
-                                {isPlaced ? (
+                                {isFlying || isPlaced ? (
                                   <span
-                                    className="slot-gold-letter letter-was-collected dynamic-swoop-in"
+                                    className={`slot-gold-letter letter-was-collected ${isFlying ? 'dynamic-swoop-in' : 'letter-settled'}`}
                                     style={{
                                       ['--start-x' as string]: `${p.startX}px`,
                                       ['--start-y' as string]: `${p.startY}px`,
@@ -1812,7 +1853,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
                                 ) : showGrayout ? (
                                   <span
                                     className="slot-gold-letter letter-grayout scale-up-reveal"
-                                    style={{ animationDelay: `${(idx % 6) * 0.08}s` }}
+                                    style={{ animationDelay: `${(idx % 6) * 0.12}s` }}
                                   >
                                     {letter.char}
                                   </span>
