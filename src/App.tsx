@@ -13,11 +13,8 @@ type Step = 'invite' | 'game' | 'instagram' | 'success'
 
 export default function App() {
   const [step, setStep] = useState<Step>('invite')
-  // const [skipToEndTest, setSkipToEndTest] = useState(false)
-  const [gameResult, setGameResult] = useState<VeilGameResult | null>(null)
 
   function handleGameComplete(result: VeilGameResult) {
-    setGameResult(result)
     void notifyGameCompleted({
       lettersCollected: result.lettersCollected,
       totalLetters: result.totalLetters,
@@ -30,12 +27,6 @@ export default function App() {
     void notifyInstagramSubmitted(instagram)
     stopMuseumJazzMusic()
     setStep('success')
-  }
-
-  function handleRestart() {
-    setGameResult(null)
-    // setSkipToEndTest(false)
-    setStep('game')
   }
 
   return (
