@@ -28,7 +28,15 @@ function clampPosition(
   }
 }
 
-export default function FleeingButton() {
+type FleeingButtonProps = {
+  label?: string
+  onProceed?: () => void
+}
+
+export default function FleeingButton({
+  label = 'Być może',
+  onProceed,
+}: FleeingButtonProps) {
   const btnRef = useRef<HTMLButtonElement>(null)
   const [hasFled, setHasFled] = useState(false)
   const [position, setPosition] = useState<{ left: number; top: number } | null>(
@@ -47,7 +55,11 @@ export default function FleeingButton() {
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
-    flee()
+    if (onProceed) {
+      onProceed()
+    } else {
+      flee()
+    }
   }
 
   useEffect(() => {
@@ -84,9 +96,9 @@ export default function FleeingButton() {
       onClick={handleClick}
       onMouseEnter={flee}
       onTouchStart={flee}
-      aria-label="Let me think — button runs away"
+      aria-label={`${label} — button runs away`}
     >
-      Pomyślę 😉
+      {label}
     </button>
   )
 }

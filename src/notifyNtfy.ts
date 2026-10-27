@@ -56,11 +56,35 @@ export async function notifyInstagramSubmitted(instagram: string, items: string[
   )
 }
 
-export async function notifyGameCompleted(result: { lettersCollected: number; totalLetters: number; difficulty: string }): Promise<void> {
-  await sendNtfy(
-    `Gra ukończona! Hasło: JESTEŚ SŁODKA 💕`,
-    `${inviteName} pokonała wszystkie etapy (wiosnę, zimę i ponury cmentarz)!\nPoziom trudności: ${result.difficulty}\nZebrane litery: ${result.lettersCollected}/${result.totalLetters}\nCzekamy na randkę! :p`,
-  )
+export type GameNotificationData = {
+  lettersCollected: number
+  totalLetters: number
+  difficulty: string
+  wasSkipped?: boolean
+  guardianClicks?: number[]
+}
+
+export async function notifyGameCompleted(result: GameNotificationData): Promise<void> {
+  const statusStr = result.wasSkipped
+    ? 'Pomięto grę (kliknięto SKIP)'
+    : 'Ukończono grę w całości'
+
+  const guardianStr =
+    result.guardianClicks && result.guardianClicks.length > 0
+      ? result.guardianClicks.join(' -> ')
+      : 'brak kliknięć u strażnika'
+
+  const title = `Gra: ${result.wasSkipped ? 'Pominięta (Skip)' : 'Ukończona'} (${inviteName})`
+  const body = [
+    `Użytkownik: ${inviteName}`,
+    `Status przejścia: ${statusStr}`,
+    `Kliknięcia u strażnika skrzyni (po kolei): ${guardianStr}`,
+    `Poziom trudności: ${result.difficulty}`,
+    `Zebrane litery: ${result.lettersCollected}/${result.totalLetters}`,
+    `Spotkanie: To widzimy się 7 listopada!`,
+  ].join('\n')
+
+  await sendNtfy(title, body)
 }
 
 

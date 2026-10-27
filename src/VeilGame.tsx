@@ -12,6 +12,7 @@ import {
   getSoundMuted,
   toggleSoundMuted,
 } from './soundEffects'
+import DifficultyModal from './DifficultyModal'
 
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
@@ -127,6 +128,8 @@ export type VeilGameResult = {
   totalLetters: number
   difficulty: Difficulty
   difficultyLabel: string
+  wasSkipped: boolean
+  guardianClicks: number[]
 }
 
 type EventBanner = {
@@ -548,6 +551,8 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')
   const difficultyRef = useRef<Difficulty>('easy')
   const [soundMuted, setSoundMuted] = useState(getSoundMuted())
+  const [wasSkipped, setWasSkipped] = useState(false)
+  const [guardianClicks, setGuardianClicks] = useState<number[]>([])
 
   // Ending Sarcophagus & Guardian States
   const [endingPhase, setEndingPhase] = useState<
@@ -657,26 +662,6 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
     }, 1200)
   }, [collectedLetters])
 
-  // "Pomiń" przenosi bezpośrednio do ekranu finałowego z gry (otwarcie sarkofagu i animacja wlotu liter)
-  const handleSkipGame = useCallback(() => {
-    startMuseumJazzMusic() // Nie zatrzymujemy jazzu
-    controlsRef.current?.skip?.()
-    setGameState('ending')
-    const currentCollected = controlsRef.current?.getCollectedLetters?.() ?? collectedLetters
-    setCollectedLetters([...currentCollected])
-    triggerSarcophagusFlight(currentCollected)
-  }, [collectedLetters, triggerSarcophagusFlight])
-
-  // Click "Wejdź" in Checkpoint (Museum Entrance)
-  const handleEnterMuseum = useCallback(() => {
-    setDoorOpening(true)
-    playDoorStoneOpen()
-    setTimeout(() => {
-      setDoorOpening(false)
-      resumeCheckpoint()
-    }, 900)
-  }, [resumeCheckpoint])
-
   // Start the Sarcophagus ending sequence
   const startEndingChoreography = useCallback((collected: SecretLetter[]) => {
     startMuseumJazzMusic() // Jazz gra dalej
@@ -692,16 +677,37 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
     setSkyLetters(scrambleLetters(collected))
   }, [])
 
-  // Handler for Guardian Hot Question (1 to 10)
+  // "Pomiń" przenosi o jeden krok bliżej: prosto do strażnika skrzyni
+  const handleSkipGame = useCallback(() => {
+    startMuseumJazzMusic() // Nie zatrzymujemy jazzu
+    setWasSkipped(true)
+    controlsRef.current?.skip?.()
+    const currentCollected = controlsRef.current?.getCollectedLetters?.() ?? collectedLetters
+    setCollectedLetters([...currentCollected])
+    startEndingChoreography(currentCollected)
+  }, [collectedLetters, startEndingChoreography])
+
+  // Click "Wejdź" in Checkpoint (Museum Entrance)
+  const handleEnterMuseum = useCallback(() => {
+    setDoorOpening(true)
+    playDoorStoneOpen()
+    setTimeout(() => {
+      setDoorOpening(false)
+      resumeCheckpoint()
+    }, 900)
+  }, [resumeCheckpoint])
+
+  // Handler for Guardian Hot Question (1 to 10) - rejestruje kliknięcia po kolei
   const handleAnswerHotQuestion = (value: number) => {
     setSelectedHotValue(value)
+    setGuardianClicks((prev) => [...prev, value])
     if (value !== 10) {
       playWrongAnswer()
       setGuardianMessage('To zła odpowiedź! ❌ Spróbuj jeszcze raz...')
       setEndingPhase('guardian_wrong')
     } else {
       playRightAnswer()
-      setGuardianMessage('Prawidłowa odpowiedź! 10/10! Sarkofag staje otworem... ✨')
+      setGuardianMessage('Prawidłowa odpowiedź! 10/10! Pradawna skrzynia staje otworem.')
       setEndingPhase('guardian_correct')
 
       // Sarcophagus opens after 1.2s
@@ -929,6 +935,8 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       startMuseumJazzMusic()
       setDoorOpening(false)
       setEndingPhase('none')
+      setWasSkipped(false)
+      setGuardianClicks([])
       runtime.state = 'playing'
       runtime.elapsed = 0
       runtime.lives = 3
@@ -1352,6 +1360,8 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       totalLetters: 12,
       difficulty,
       difficultyLabel: DIFFICULTY_CONFIGS[difficulty].label,
+      wasSkipped,
+      guardianClicks,
     })
   }
 
@@ -1483,68 +1493,16 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
           </div>
         )}
 
-        {/* Ekran Startowy gry */}
+        {/* Ekran wyboru trudności i startu gry */}
         {gameState === 'ready' && !error && (
-          <div className="game-overlay">
-            <div className="game-modal-card">
-              <div className="modal-top-corner-actions">
-                <button
-                  type="button"
-                  className="game-audio-btn modal-audio-btn"
-                  onClick={handleToggleSound}
-                  aria-label={soundMuted ? 'Włącz dźwięk' : 'Wycisz dźwięk'}
-                  title={soundMuted ? 'Włącz dźwięk' : 'Wycisz dźwięk'}
-                >
-                  {soundMuted ? '🔇' : '🔊'}
-                </button>
-              </div>
-
-              <div className="scarab-avatar-icon">🪲✨</div>
-              <h3 className="modal-heading">Skarabeusz musi dostać się do muzeum, wyruszmy na przygodę!</h3>
-              <p className="modal-text">
-                Steruj za pomocą strzałek lub tapując lewą/prawą stronę ekranu.
-                Omijaj przeszkody, zbieraj złote runy z literami i otwórz pradawny sarkofag!
-              </p>
-
-              <div className="game-difficulty-selector" aria-label="Wybór poziomu trudności">
-                <p className="game-difficulty-title">Wybierz poziom trudności</p>
-                <div className="game-difficulty-options" role="group" aria-label="Poziom trudności">
-                  {(Object.keys(DIFFICULTY_CONFIGS) as Difficulty[]).map((key) => {
-                    const config = DIFFICULTY_CONFIGS[key]
-                    const selected = difficulty === key
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        className={`game-difficulty-btn ${selected ? 'selected' : ''}`}
-                        onClick={() => selectDifficulty(key)}
-                        aria-pressed={selected}
-                      >
-                        <span className="game-difficulty-emoji" aria-hidden="true">{config.emoji}</span>
-                        <span className="game-difficulty-label">{config.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="game-difficulty-selected-description" aria-live="polite">
-                <span className="game-difficulty-selected-icon" aria-hidden="true">
-                  {DIFFICULTY_CONFIGS[difficulty].emoji}
-                </span>
-                <span>{DIFFICULTY_CONFIGS[difficulty].description}</span>
-              </div>
-
-              <div className="modal-actions-column">
-                <button type="button" className="game-primary-btn" onClick={startGame}>
-                  Wyruszmy na przygodę 🪲
-                </button>
-                <button type="button" className="game-skip-btn" onClick={handleSkipGame}>
-                  Pomiń grę ⏭️
-                </button>
-              </div>
-            </div>
-          </div>
+          <DifficultyModal
+            difficulty={difficulty}
+            difficultyConfigs={DIFFICULTY_CONFIGS}
+            onSelectDifficulty={selectDifficulty}
+            onStartGame={startGame}
+            soundMuted={soundMuted}
+            onToggleSound={handleToggleSound}
+          />
         )}
 
         {/* JEDYNY Checkpoint: Wejście do Muzeum ze zdjęciem muzeum-wejscie.png */}
@@ -1558,7 +1516,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
             </div>
 
             <div className="museum-entrance-card">
-              <span className="checkpoint-badge museum-badge">Checkpoint • Wrota Muzeum 🏛️</span>
+              <span className="checkpoint-badge museum-badge">Checkpoint • Wrota Muzeum</span>
               <div className="museum-image-wrapper">
                 <img
                   src="/muzeum-wejscie.png"
@@ -1579,15 +1537,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
                   onClick={handleEnterMuseum}
                   disabled={doorOpening}
                 >
-                  Wejdź 🗝️
-                </button>
-                <button
-                  type="button"
-                  className="game-skip-btn"
-                  onClick={handleSkipGame}
-                  disabled={doorOpening}
-                >
-                  Pomiń grę ⏭️
+                  Wejdź
                 </button>
               </div>
             </div>
@@ -1603,9 +1553,6 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
               <div className="modal-actions-column">
                 <button type="button" className="game-primary-btn" onClick={togglePause}>
                   Wznów grę
-                </button>
-                <button type="button" className="game-skip-btn" onClick={handleSkipGame}>
-                  Pomiń grę ⏭️
                 </button>
               </div>
             </div>
@@ -1649,19 +1596,19 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
                 {hasCheckpoint ? (
                   <>
                     <button type="button" className="game-primary-btn" onClick={() => controlsRef.current?.resumeCheckpoint()}>
-                      Wróć do Muzeum 🏛️
+                      Wróć do Muzeum
                     </button>
                     <button type="button" className="game-subtle-btn" onClick={startGame}>
-                      Od początku 🪲
+                      Od początku
                     </button>
                   </>
                 ) : (
                   <button type="button" className="game-primary-btn" onClick={startGame}>
-                    Spróbuj ponownie ↺
+                    Spróbuj ponownie
                   </button>
                 )}
                 <button type="button" className="game-skip-btn" onClick={handleSkipGame}>
-                  Pomiń grę ⏭️
+                  Pomiń grę
                 </button>
               </div>
             </div>
@@ -1693,12 +1640,12 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
                       <circle cx="60" cy="30" r="2.5" fill="#d50000" />
                     </svg>
                   </div>
-                  <span className="guardian-name-badge">Strażnik Sarkofagu</span>
+                  <span className="guardian-name-badge">Strażnik Skrzyni</span>
                 </div>
 
                 <div className="guardian-speech-card">
                   <p className="guardian-question-text">
-                    „Aby otworzyć pradawny sarkofag, musisz odpowiedzieć na jedno pytanie:
+                    „Aby otworzyć pradawną skrzynię, musisz odpowiedzieć na jedno pytanie:
                     <br />
                     <strong>Jak bardzo hot jest twórca tej gry?</strong>”
                   </p>
@@ -1736,14 +1683,14 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
                       Zebrane litery: <strong>{collectedLetters.length} / 12</strong>
                     </span>
                   </div>
-                  <span className="sarcophagus-stage-badge">Złoty Sarkofag Faraona ✨</span>
+                  <span className="sarcophagus-stage-badge">Złoty Sarkofag Faraona</span>
                   <h2 className="sarcophagus-title">
                     {endingPhase === 'complete' ? 'Hasło Odkryte!' : 'Sarkofag staje otworem...'}
                   </h2>
                   <p className="sarcophagus-flight-info-banner">
                     {endingPhase === 'complete'
                       ? 'Wszystkie złote litery połączyły się w proroctwo!'
-                      : '✨ Twoje zebrane litery unoszą się w powietrzu i wlatują do sarkofagu! ✨'}
+                      : 'Twoje zebrane litery unoszą się w powietrzu i wlatują do sarkofagu.'}
                   </p>
                 </div>
 
@@ -1871,14 +1818,14 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
                   <div className="sarcophagus-celebration-footer">
                 
                     <div className="sarcophagus-final-count-badge">
-                      🏆 Zdobyłaś <strong>{collectedLetters.length} / 12</strong> liter na poziomie {DIFFICULTY_CONFIGS[difficulty].label}!
+                      Zdobyłaś <strong>{collectedLetters.length} / 12</strong> liter na poziomie {DIFFICULTY_CONFIGS[difficulty].label}!
                     </div>
                     <button
                       type="button"
                       className="btn btn-tak btn-kontynuujmy"
                       onClick={handleContinueToForm}
                     >
-                      Kontynuujmy ✨
+                      Kontynuujmy
                     </button>
                   </div>
                 )}
