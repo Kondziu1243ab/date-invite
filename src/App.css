@@ -3375,32 +3375,54 @@
 }
 
 /* -------------------------------------------------------------
-   Difficulty Modal & Selection Highlights
+   Difficulty Modal & Selection Highlights (Fully Responsive)
    ------------------------------------------------------------- */
 .difficulty-modal-overlay {
-  background: rgba(0, 0, 0, 0.65);
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  height: 100vh;
+  z-index: 99999;
+  background: rgba(15, 12, 20, 0.76);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 0.75rem;
+  box-sizing: border-box;
+  animation: overlay-in 0.25s ease-out forwards;
 }
 
 .difficulty-modal-card {
   background: #ffffff;
-  border-radius: 24px;
+  border-radius: 20px;
   border: 1.5px solid #fce4ec;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(233, 30, 99, 0.08);
-  padding: 1.6rem 1.5rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(233, 30, 99, 0.1);
+  padding: 1.15rem 1.15rem;
   width: 100%;
-  max-width: 440px;
+  max-width: 390px;
+  max-height: calc(100dvh - 1.5rem);
+  max-height: calc(100vh - 1.5rem);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #f48fb1 transparent;
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 0.75rem;
   box-sizing: border-box;
   animation: difficulty-modal-pop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.difficulty-modal-card::-webkit-scrollbar {
+  width: 4px;
+}
+.difficulty-modal-card::-webkit-scrollbar-thumb {
+  background: #f48fb1;
+  border-radius: 4px;
 }
 
 @keyframes difficulty-modal-pop {
@@ -3422,13 +3444,13 @@
 }
 
 .difficulty-modal-badge {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #ad1457;
   background: #fce4ec;
-  padding: 4px 10px;
+  padding: 3px 9px;
   border-radius: 999px;
 }
 
@@ -3436,13 +3458,13 @@
   background: #f5f5f7;
   border: 1px solid #e0e0e0;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
   transition: all 0.15s ease;
 }
 
@@ -3456,24 +3478,24 @@
 }
 
 .difficulty-modal-heading {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: #1a1a1a;
-  margin: 0 0 0.3rem 0;
+  margin: 0 0 0.2rem 0;
   letter-spacing: -0.01em;
 }
 
 .difficulty-modal-subtext {
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   color: #666;
-  line-height: 1.45;
+  line-height: 1.35;
   margin: 0;
 }
 
 .difficulty-cards-list {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.6rem;
   width: 100%;
 }
 
@@ -3482,13 +3504,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.9rem 1.1rem;
+  padding: 0.75rem 0.95rem;
   background: #fafafa;
   border: 2px solid #eef0f2;
-  border-radius: 16px;
+  border-radius: 14px;
   cursor: pointer;
   text-align: left;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
   width: 100%;
   box-sizing: border-box;
@@ -3497,15 +3519,14 @@
 .difficulty-card-item:hover {
   background: #ffffff;
   border-color: #d81b60;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
 }
 
 /* PODŚWIETLENIE WYBRANEGO POZIOMU */
 .difficulty-card-item.is-selected {
   background: #fff5f8;
   border-color: #e91e63;
-  box-shadow: 0 6px 20px rgba(233, 30, 99, 0.18);
+  box-shadow: 0 4px 14px rgba(233, 30, 99, 0.16);
   transform: translateY(-1px) scale(1.015);
 }
 
@@ -3516,11 +3537,11 @@
 .difficulty-card-title-row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .difficulty-card-name {
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 800;
   color: #222222;
 }
@@ -3530,13 +3551,13 @@
 }
 
 .difficulty-selected-pill {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   background: #e91e63;
   color: #ffffff;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 999px;
   animation: pill-pop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -3547,20 +3568,20 @@
 }
 
 .difficulty-card-desc {
-  font-size: 0.81rem;
+  font-size: 0.78rem;
   color: #666666;
-  line-height: 1.35;
-  margin: 0.25rem 0 0 0;
+  line-height: 1.3;
+  margin: 0.2rem 0 0 0;
 }
 
 .difficulty-card-item.is-selected .difficulty-card-desc {
-  color: #555555;
+  color: #444444;
 }
 
 /* Radio circle indicator */
 .difficulty-radio-indicator {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: 2px solid #ccc;
   display: flex;
@@ -3576,8 +3597,8 @@
 }
 
 .difficulty-radio-dot {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: transparent;
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -3592,21 +3613,15 @@
 .difficulty-modal-actions {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.5rem;
   width: 100%;
-  margin-top: 0.25rem;
+  margin-top: 0.2rem;
 }
 
 .difficulty-start-btn {
   margin: 0;
-  padding: 0.75rem 1.25rem;
-  font-size: 1rem;
-}
-
-.difficulty-skip-btn {
-  margin: 0;
-  padding: 0.6rem 1rem;
-  font-size: 0.9rem;
+  padding: 0.7rem 1.2rem;
+  font-size: 0.98rem;
 }
 
 /* Gameover difficulty selector */
@@ -3642,40 +3657,109 @@
   box-shadow: 0 2px 8px rgba(233, 30, 99, 0.2);
 }
 
+/* -------------------------------------------------------------
+   Mobile Specific Adjustments for Small/Medium Phones
+   ------------------------------------------------------------- */
+@media (max-width: 480px), (max-height: 720px) {
+  .difficulty-modal-overlay {
+    padding: 0.5rem;
+  }
 
-.date-final-subtext {
-  font-size: 1.1rem;
-  color: #666;
-  margin: 0;
-  line-height: 1.5;
+  .difficulty-modal-card {
+    padding: 0.85rem 0.8rem;
+    gap: 0.5rem;
+    border-radius: 16px;
+    max-height: calc(100dvh - 1rem);
+    max-height: calc(100vh - 1rem);
+  }
+
+  .difficulty-modal-heading {
+    font-size: 1.12rem;
+  }
+
+  .difficulty-modal-subtext {
+    font-size: 0.74rem;
+    line-height: 1.25;
+  }
+
+  .difficulty-cards-list {
+    gap: 0.4rem;
+  }
+
+  .difficulty-card-item {
+    padding: 0.55rem 0.7rem;
+    gap: 0.5rem;
+    border-radius: 12px;
+  }
+
+  .difficulty-card-name {
+    font-size: 0.92rem;
+  }
+
+  .difficulty-card-desc {
+    font-size: 0.72rem;
+    line-height: 1.2;
+    margin-top: 0.05rem;
+  }
+
+  .difficulty-selected-pill {
+    font-size: 0.58rem;
+    padding: 1px 5px;
+  }
+
+  .difficulty-radio-indicator {
+    width: 17px;
+    height: 17px;
+  }
+
+  .difficulty-radio-dot {
+    width: 7px;
+    height: 7px;
+  }
+
+  .difficulty-start-btn {
+    padding: 0.62rem 1rem;
+    font-size: 0.92rem;
+    min-height: 42px;
+  }
 }
 
-.date-final-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #fff0f3 0%, #ffe3ec 100%);
-  border: 1.5px solid #ffccd5;
-  border-radius: 999px;
-  padding: 0.55rem 1.4rem;
-  box-shadow: 0 4px 16px rgba(233, 30, 99, 0.12);
-  margin-top: 0.75rem;
-}
+@media (max-height: 520px) {
+  .difficulty-modal-card {
+    padding: 0.55rem 0.75rem;
+    gap: 0.35rem;
+  }
 
-.date-final-badge-text {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #c2185b;
-  letter-spacing: 0.01em;
-}
+  .difficulty-modal-intro {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
 
-.date-final-stats {
-  margin-top: 0.75rem;
-  font-size: 0.9rem;
-  color: #888;
-  background: #f7f7f7;
-  border-radius: 999px;
-  padding: 0.35rem 1rem;
-  border: 1px solid #eee;
+  .difficulty-modal-subtext {
+    display: none;
+  }
+
+  .difficulty-cards-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.35rem;
+  }
+
+  .difficulty-card-item {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.4rem 0.5rem;
+  }
+
+  .difficulty-radio-indicator {
+    display: none;
+  }
+
+  .difficulty-start-btn {
+    min-height: 38px;
+    padding: 0.45rem;
+    font-size: 0.88rem;
+  }
 }
 

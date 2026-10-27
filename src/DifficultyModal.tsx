@@ -9,6 +9,12 @@ type DifficultyModalProps = {
   onToggleSound: () => void
 }
 
+const SHORT_DESCRIPTIONS: Record<Difficulty, string> = {
+  easy: 'Brak obrażeń od ścian, łagodniejszy wiatr.',
+  medium: 'Ściany boczne ranią, umiarkowany wiatr.',
+  hard: 'Raniące ściany, szybszy lot i wyzwanie.',
+}
+
 export default function DifficultyModal({
   difficulty,
   difficultyConfigs,
@@ -20,7 +26,7 @@ export default function DifficultyModal({
   const difficultyKeys: Difficulty[] = ['easy', 'medium', 'hard']
 
   return (
-    <div className="game-overlay difficulty-modal-overlay">
+    <div className="difficulty-modal-overlay">
       <div className="difficulty-modal-card" role="dialog" aria-modal="true" aria-labelledby="difficulty-modal-title">
         {/* Górny pasek modala z wyciszeniem dźwięku */}
         <div className="difficulty-modal-header">
@@ -42,7 +48,7 @@ export default function DifficultyModal({
             Wybierz poziom trudności
           </h3>
           <p className="difficulty-modal-subtext">
-            Steruj strzałkami lub tapuj lewą i prawą stronę ekranu. Omijaj przeszkody i zbieraj złote litery.
+            Steruj strzałkami lub tapuj boki ekranu.
           </p>
         </div>
 
@@ -68,7 +74,9 @@ export default function DifficultyModal({
                       <span className="difficulty-selected-pill">Wybrany</span>
                     )}
                   </div>
-                  <p className="difficulty-card-desc">{config.description}</p>
+                  <p className="difficulty-card-desc">
+                    {SHORT_DESCRIPTIONS[key] || config.description}
+                  </p>
                 </div>
 
                 <div className="difficulty-radio-indicator" aria-hidden="true">

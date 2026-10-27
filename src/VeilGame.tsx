@@ -1386,6 +1386,18 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
 
   return (
     <div className="veil-game-wrapper">
+      {/* Ekran wyboru trudności i startu gry */}
+      {gameState === 'ready' && !error && (
+        <DifficultyModal
+          difficulty={difficulty}
+          difficultyConfigs={DIFFICULTY_CONFIGS}
+          onSelectDifficulty={selectDifficulty}
+          onStartGame={startGame}
+          soundMuted={soundMuted}
+          onToggleSound={handleToggleSound}
+        />
+      )}
+
       <div className="game-top-bar">
         <div className="game-lives" aria-label={`Pozostałe życia: ${lives}`}>
           {Array.from({ length: 3 }).map((_, index) => (
@@ -1493,17 +1505,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
           </div>
         )}
 
-        {/* Ekran wyboru trudności i startu gry */}
-        {gameState === 'ready' && !error && (
-          <DifficultyModal
-            difficulty={difficulty}
-            difficultyConfigs={DIFFICULTY_CONFIGS}
-            onSelectDifficulty={selectDifficulty}
-            onStartGame={startGame}
-            soundMuted={soundMuted}
-            onToggleSound={handleToggleSound}
-          />
-        )}
+
 
         {/* JEDYNY Checkpoint: Wejście do Muzeum ze zdjęciem muzeum-wejscie.png */}
         {gameState === 'checkpoint' && (
