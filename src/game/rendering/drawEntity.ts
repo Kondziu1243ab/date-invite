@@ -9,7 +9,32 @@ export function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
     entity.radius = 16 * unit
     const r = entity.radius
 
-    if (biome === 'museum') {
+    if (biome === 'invisible_exhibition') {
+      // Mystical Bioluminescent Phosphorescent Rune glowing in the dark
+      graphics.circle(0, 0, r * 1.5).fill({ color: 0x00e676, alpha: 0.35 })
+      graphics.circle(0, 0, r * 1.15).fill({ color: 0x1de9b6, alpha: 0.22 })
+      graphics
+        .poly(
+          [
+            0,
+            -r * 1.1,
+            r * 0.95,
+            -r * 0.5,
+            r * 0.95,
+            r * 0.5,
+            0,
+            r * 1.1,
+            -r * 0.95,
+            r * 0.5,
+            -r * 0.95,
+            -r * 0.5,
+          ],
+          true
+        )
+        .fill(0x004d40)
+        .stroke({ width: 2.4 * unit, color: 0x69f0ae, join: 'round' })
+      graphics.circle(0, 0, r * 0.55).fill({ color: 0x00e676, alpha: 0.65 })
+    } else if (biome === 'museum') {
       graphics.circle(0, 0, r * 1.4).fill({ color: 0xffd54f, alpha: 0.35 })
       graphics
         .poly(
@@ -103,6 +128,165 @@ export function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
       .poly([-r, 0, r, 0, 0, r * 1.2], true)
       .fill(0xef476f)
     graphics.circle(-r * 0.35, -r * 0.38, r * 0.16).fill({ color: 0xffffff, alpha: 0.72 })
+    return
+  }
+
+  if (
+    biome === 'invisible_exhibition' ||
+    entity.hazardType === 'black_sunglasses' ||
+    entity.hazardType === 'white_cane'
+  ) {
+    // Czarne Okulary Przeciwsłoneczne / Niewidomego (Dark Stylish Sunglasses)
+    entity.radius = 21 * unit
+    const r = entity.radius
+
+    // 1. Temples / arms (zauszniki okularów wystające do tyłu)
+    // Left temple arm
+    graphics
+      .poly(
+        [
+          -r * 0.94,
+          -r * 0.22,
+          -r * 1.28,
+          -r * 0.72,
+          -r * 1.18,
+          -r * 0.82,
+          -r * 0.86,
+          -r * 0.34,
+        ],
+        true
+      )
+      .fill(0x18181b)
+      .stroke({ width: 1.0 * unit, color: 0x27272a })
+
+    // Right temple arm
+    graphics
+      .poly(
+        [
+          r * 0.94,
+          -r * 0.22,
+          r * 1.28,
+          -r * 0.72,
+          r * 1.18,
+          -r * 0.82,
+          r * 0.86,
+          -r * 0.34,
+        ],
+        true
+      )
+      .fill(0x18181b)
+      .stroke({ width: 1.0 * unit, color: 0x27272a })
+
+    // Gold / metallic hinge rivets on temple joints
+    graphics.circle(-r * 0.92, -r * 0.24, 1.4 * unit).fill(0xd4af37)
+    graphics.circle(r * 0.92, -r * 0.24, 1.4 * unit).fill(0xd4af37)
+
+    // 2. Thick stylish acetate frames (oprawki)
+    // Left frame outer border
+    graphics
+      .roundRect(-r * 0.98, -r * 0.44, r * 0.88, r * 0.84, 5 * unit)
+      .fill(0x111827)
+      .stroke({ width: 2.2 * unit, color: 0x030712 })
+
+    // Right frame outer border
+    graphics
+      .roundRect(r * 0.1, -r * 0.44, r * 0.88, r * 0.84, 5 * unit)
+      .fill(0x111827)
+      .stroke({ width: 2.2 * unit, color: 0x030712 })
+
+    // 3. Nose bridge connecting lenses (mostek okularów)
+    graphics
+      .roundRect(-r * 0.14, -r * 0.3, r * 0.28, 3.4 * unit, 1.6 * unit)
+      .fill(0x030712)
+      .stroke({ width: 1.2 * unit, color: 0x1f2937 })
+
+    // Keyhole / nose pad contour
+    graphics
+      .moveTo(-r * 0.12, -r * 0.1)
+      .bezierCurveTo(0, -r * 0.22, 0, -r * 0.22, r * 0.12, -r * 0.1)
+      .stroke({ width: 1.5 * unit, color: 0x111827 })
+
+    // 4. Dark tinted lenses (ciemne szkła)
+    graphics
+      .roundRect(-r * 0.92, -r * 0.38, r * 0.76, r * 0.72, 4 * unit)
+      .fill(0x09090b)
+    graphics
+      .roundRect(r * 0.16, -r * 0.38, r * 0.76, r * 0.72, 4 * unit)
+      .fill(0x09090b)
+
+    // 5. Glossy glass glare / reflections (charakterystyczny odblask na ciemnych szkłach)
+    // Left lens reflection diagonal bands
+    graphics
+      .poly(
+        [
+          -r * 0.84,
+          -r * 0.34,
+          -r * 0.68,
+          -r * 0.34,
+          -r * 0.86,
+          r * 0.18,
+          -r * 0.92,
+          r * 0.12,
+        ],
+        true
+      )
+      .fill({ color: 0x38bdf8, alpha: 0.38 })
+
+    graphics
+      .poly(
+        [
+          -r * 0.62,
+          -r * 0.34,
+          -r * 0.52,
+          -r * 0.34,
+          -r * 0.66,
+          r * 0.3,
+          -r * 0.74,
+          r * 0.3,
+        ],
+        true
+      )
+      .fill({ color: 0xffffff, alpha: 0.65 })
+
+    // Right lens reflection diagonal bands
+    graphics
+      .poly(
+        [
+          r * 0.24,
+          -r * 0.34,
+          r * 0.4,
+          -r * 0.34,
+          r * 0.22,
+          r * 0.18,
+          r * 0.16,
+          r * 0.12,
+        ],
+        true
+      )
+      .fill({ color: 0x38bdf8, alpha: 0.38 })
+
+    graphics
+      .poly(
+        [
+          r * 0.46,
+          -r * 0.34,
+          r * 0.56,
+          -r * 0.34,
+          r * 0.42,
+          r * 0.3,
+          r * 0.34,
+          r * 0.3,
+        ],
+        true
+      )
+      .fill({ color: 0xffffff, alpha: 0.65 })
+
+    // Sleek top frame gloss line
+    graphics
+      .moveTo(-r * 0.92, -r * 0.42)
+      .lineTo(r * 0.92, -r * 0.42)
+      .stroke({ width: 1.2 * unit, color: 0xffffff, alpha: 0.4 })
+
     return
   }
 

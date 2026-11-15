@@ -21,6 +21,7 @@ import {
   GamePauseModal,
   GameReadyModal,
   GuardianRiddleModal,
+  InvisibleExhibitionCheckpointModal,
   MuseumCheckpointModal,
   SarcophagusStage,
 } from './game/components'
@@ -194,6 +195,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
     collectedLetters,
     setCollectedLetters,
     hasCheckpoint,
+    checkpointStage,
     biome,
     progress,
     toast,
@@ -242,6 +244,11 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
       setDoorOpening(false)
       resumeCheckpoint()
     }, 900)
+  }, [resumeCheckpoint])
+
+  // Checkpoint: Wejście na Niewidzialną Wystawę
+  const handleEnterExhibition = useCallback(() => {
+    resumeCheckpoint()
   }, [resumeCheckpoint])
 
   // Rozpoczęcie zagadek po kliknięciu "Podejmij wyzwanie"
@@ -493,10 +500,18 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
         )}
 
         {/* Checkpoint: Wejście do Muzeum */}
-        {gameState === 'checkpoint' && (
+        {gameState === 'checkpoint' && checkpointStage === 'museum' && (
           <MuseumCheckpointModal
             doorOpening={doorOpening}
             onEnter={handleEnterMuseum}
+            onSkip={handleSkipGame}
+          />
+        )}
+
+        {/* Checkpoint: Wejście na Niewidzialną Wystawę */}
+        {gameState === 'checkpoint' && checkpointStage === 'invisible_exhibition' && (
+          <InvisibleExhibitionCheckpointModal
+            onEnter={handleEnterExhibition}
             onSkip={handleSkipGame}
           />
         )}
@@ -513,6 +528,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
         {gameState === 'gameover' && (
           <GameOverModal
             hasCheckpoint={hasCheckpoint}
+            checkpointStage={checkpointStage}
             difficulty={difficulty}
             onSelectDifficulty={setDifficulty}
             onResumeCheckpoint={resumeCheckpoint}

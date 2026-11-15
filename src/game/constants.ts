@@ -6,7 +6,8 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     emoji: '🌸',
     description: 'Bardzo łagodna przygoda: brak obrażeń od ścian, rzadsze przeszkody i lekki wiaterek.',
     museumStart: 38_000,
-    totalDuration: 76_000,
+    exhibitionStart: 76_000,
+    totalDuration: 114_000,
     hazardIntervalMultiplier: 1.25,
     eventWindMultiplier: 0.75,
     eventDurationMultiplier: 0.8,
@@ -17,7 +18,8 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     emoji: '⚡',
     description: 'Klasyczna przygoda: brak obrażeń od ścian, zrównoważony wiatr i tempo.',
     museumStart: 44_000,
-    totalDuration: 86_000,
+    exhibitionStart: 86_000,
+    totalDuration: 128_000,
     hazardIntervalMultiplier: 1.0,
     eventWindMultiplier: 1.0,
     eventDurationMultiplier: 1.0,
@@ -28,7 +30,8 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     emoji: '🔥',
     description: 'Wyzwanie: raniące ściany boczne, silniejszy wiatr i więcej przeszkód.',
     museumStart: 48_000,
-    totalDuration: 94_000,
+    exhibitionStart: 94_000,
+    totalDuration: 140_000,
     hazardIntervalMultiplier: 0.82,
     eventWindMultiplier: 1.25,
     eventDurationMultiplier: 1.2,
@@ -41,7 +44,8 @@ export const getBiomesForDifficulty = (diff: Difficulty) => {
   return [
     { id: 'spring' as BiomeId, label: '🌸 Wiosenny wiatr', until: Math.round(cfg.museumStart * 0.48), event: 'Wiosenny podmuch' },
     { id: 'winter' as BiomeId, label: '❄️ Zimowy mróz', until: cfg.museumStart, event: 'Śnieżyca' },
-    { id: 'museum' as BiomeId, label: '🏛️ Muzeum Tajemnic', until: cfg.totalDuration, event: 'Złoty blask' },
+    { id: 'museum' as BiomeId, label: '🏛️ Muzeum Tajemnic', until: cfg.exhibitionStart, event: 'Złoty blask' },
+    { id: 'invisible_exhibition' as BiomeId, label: '🕶️ Niewidzialna Wystawa', until: cfg.totalDuration, event: 'Głęboki zmrok' },
   ] as const
 }
 
@@ -67,23 +71,24 @@ export const SECRET_LETTERS: SecretLetter[] = [
   { id: 11, char: 'A', wordIndex: 1, charIndex: 5 },
 ]
 
-// Scrambled sequence across the 3 stages:
-// Stage 1 (Spring): K, E, D, S
-// Stage 2 (Winter): A, Ł, T, Ś
-// Stage 3 (Museum): J, O, S, E
+// Scrambled sequence across the 4 stages (3 letters per stage):
+// Stage 1 (Spring): K, E, D
+// Stage 2 (Winter): S, A, Ł
+// Stage 3 (Museum): T, Ś, J
+// Stage 4 (Invisible Exhibition): O, S, E
 export const SPAWN_LETTER_ORDER: number[] = [
-  10, // K
-  1,  // E
-  9,  // D
-  6,  // S
-  11, // A
-  7,  // Ł
-  3,  // T
-  5,  // Ś
-  0,  // J
-  8,  // O
-  2,  // S
-  4,  // E
+  10, // K (Wiosna 1)
+  1,  // E (Wiosna 2)
+  9,  // D (Wiosna 3)
+  6,  // S (Zima 1)
+  11, // A (Zima 2)
+  7,  // Ł (Zima 3)
+  3,  // T (Muzeum 1)
+  5,  // Ś (Muzeum 2)
+  0,  // J (Muzeum 3)
+  8,  // O (Niewidzialna Wystawa 1)
+  2,  // S (Niewidzialna Wystawa 2)
+  4,  // E (Niewidzialna Wystawa 3)
 ]
 
 // Random trajectory presets for each of the 12 flying letters

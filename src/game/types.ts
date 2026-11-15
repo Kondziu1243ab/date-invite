@@ -7,6 +7,7 @@ export type DifficultyConfig = {
   emoji: string
   description: string
   museumStart: number
+  exhibitionStart: number
   totalDuration: number
   hazardIntervalMultiplier: number
   eventWindMultiplier: number
@@ -14,7 +15,7 @@ export type DifficultyConfig = {
   sideDamage: boolean
 }
 
-export type BiomeId = 'spring' | 'winter' | 'museum'
+export type BiomeId = 'spring' | 'winter' | 'museum' | 'invisible_exhibition'
 
 export type SecretLetter = {
   id: number
@@ -41,7 +42,7 @@ export type VeilGameResult = {
 export type EventBanner = {
   title: string
   subtitle: string
-  type: 'gust' | 'storm' | 'museum_light' | 'diamond_card'
+  type: 'gust' | 'storm' | 'museum_light' | 'diamond_card' | 'darkness'
 }
 
 export type VeilGameProps = {
@@ -66,7 +67,36 @@ export type EndingPhase =
 export type GenieMood = 'idle' | 'warning' | 'wrong' | 'playful' | 'correct' | 'triumph'
 
 export type EntityKind = 'hazard' | 'letter' | 'heart'
-export type HazardType = 'twig' | 'icicle' | 'vase' | 'brush' | 'golden_orb' | 'hieroglyph_slab'
+export type HazardType =
+  | 'twig'
+  | 'icicle'
+  | 'vase'
+  | 'brush'
+  | 'golden_orb'
+  | 'hieroglyph_slab'
+  | 'white_cane'
+  | 'black_sunglasses'
+
+export type BatState = 'lurking' | 'lunging' | 'biting' | 'swoop_away'
+
+export type BatEntity = {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  state: BatState
+  stateTimer: number
+  blinkTimer: number
+  isBlinking: boolean
+  flapPhase: number
+  active: boolean
+  hasDamaged: boolean
+  targetX: number
+  targetY: number
+  container: Container
+  eyesGraphics: Graphics
+  bodyGraphics: Graphics
+}
 
 export type Metrics = {
   width: number
@@ -112,19 +142,26 @@ export type Runtime = {
   lastHudAt: number
   hasReachedCheckpoint: boolean
   museumStageStarted: boolean
+  hasReachedExhibitionCheckpoint: boolean
+  exhibitionStageStarted: boolean
   freezeUntil: number
   eventBanner: EventBanner | null
   postFreezeAction: (() => void) | null
   springEventTriggered: boolean
   winterEventTriggered: boolean
   museumEventTriggered: boolean
+  exhibitionEventTriggered: boolean
   diamondCardEventTriggered: boolean
   hasDiamondCard: boolean
   difficulty: Difficulty
   museumStart: number
+  exhibitionStart: number
   totalDuration: number
   collectedLetters: SecretLetter[]
   checkpointLetters: SecretLetter[]
+  checkpointExhibitionLetters: SecretLetter[]
+  bats: BatEntity[]
+  nextBatSpawnAt: number
   hitsTaken: number
   deathsCount: number
   manuallyCollectedCount: number

@@ -62,7 +62,7 @@ export function MuseumCheckpointModal({
             onClick={onSkip}
             disabled={doorOpening}
           >
-            Pomiń do strażnika ⏭️
+            Pomiń etap ⏭️
           </button>
         </div>
       </div>

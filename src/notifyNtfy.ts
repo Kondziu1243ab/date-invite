@@ -81,6 +81,15 @@ export async function notifyMuseumReached(): Promise<void> {
   )
 }
 
+export async function notifyInvisibleExhibitionReached(): Promise<void> {
+  await sendNtfy(
+    `Niewidzialna Wystawa! 🕶️🕯️`,
+    `${inviteName} wkracza w całkowity mrok Niewidzialnej Wystawy! Chrabąszcz rozświetla drogę poświatą!`,
+    ['sunglasses', 'candle', 'bat'],
+    'default'
+  )
+}
+
 export async function notifyGuardianQuestion1(answer: string, isCorrect: boolean): Promise<void> {
   const resultText = isCorrect ? 'Prawidłowo! (Bramkarz 🧤)' : `Błędna odpowiedź: ${answer} (straciła serduszko)`
   await sendNtfy(

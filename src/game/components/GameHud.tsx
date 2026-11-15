@@ -94,7 +94,7 @@ export function GameHud({
         <span className="game-letter-counter">
           ✨ {collectedLetters.length}/12
         </span>
-        <span className="game-goal-icon">🏛️</span>
+        <span className="game-goal-icon" title="Złoty Sarkofag">🏺</span>
       </div>
 
       {/* Zebrane litery w locie */}

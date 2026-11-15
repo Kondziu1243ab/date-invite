@@ -28,6 +28,14 @@ export function setSoundMuted(muted: boolean): void {
     jazzAudio.muted = muted
     jazzAudio.volume = muted ? 0 : 0.35
   }
+  if (darkMasterGain) {
+    try {
+      const ctx = getAudioContext()
+      darkMasterGain.gain.setValueAtTime(muted ? 0 : 0.22, ctx.currentTime)
+    } catch {
+      // Ignore
+    }
+  }
 }
 
 export function toggleSoundMuted(): boolean {
@@ -314,6 +322,254 @@ export function playCardUse(): void {
       osc.start(now + idx * 0.04)
       osc.stop(now + idx * 0.04 + 0.6)
     })
+  } catch {
+    // Ignore
+  }
+}
+
+// -------------------------------------------------------------
+// Niewidzialna Wystawa (Invisible Exhibition) Atmospheric Music
+// Ethereal music box melody, crystal chimes & warm dreamy pads
+// -------------------------------------------------------------
+let darkMasterGain: GainNode | null = null
+let darkPadOsc1: OscillatorNode | null = null
+let darkPadOsc2: OscillatorNode | null = null
+let darkPadGain: GainNode | null = null
+let darkMelodyInterval: number | null = null
+let melodyStep = 0
+
+// Atmospheric melody sequence (D minor / Aeolian mystical theme)
+const DARK_MELODY_NOTES = [
+  293.66, // D4
+  349.23, // F4
+  440.0,  // A4
+  523.25, // C5
+  587.33, // D5
+  523.25, // C5
+  440.0,  // A4
+  349.23, // F4
+  233.08, // Bb3
+  293.66, // D4
+  349.23, // F4
+  440.0,  // A4
+  392.0,  // G4
+  349.23, // F4
+  329.63, // E4
+  277.18, // C#4
+]
+
+export function startExhibitionDarkMusic(): void {
+  try {
+    // 1. Fully pause jazz during the dark exhibition
+    if (jazzAudio && !jazzAudio.paused) {
+      jazzAudio.pause()
+    }
+
+    if (isMuted || darkMasterGain) return
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+
+    // Master volume for exhibition music
+    darkMasterGain = ctx.createGain()
+    darkMasterGain.gain.setValueAtTime(0.001, now)
+    darkMasterGain.gain.linearRampToValueAtTime(0.24, now + 1.2)
+    darkMasterGain.connect(ctx.destination)
+
+    // 2. Soft, warm ethereal pad (D3 + A3 in warm midrange, gentle sine/triangle)
+    darkPadGain = ctx.createGain()
+    darkPadGain.gain.setValueAtTime(0.06, now)
+
+    const padFilter = ctx.createBiquadFilter()
+    padFilter.type = 'lowpass'
+    padFilter.frequency.setValueAtTime(360, now)
+
+    darkPadOsc1 = ctx.createOscillator()
+    darkPadOsc1.type = 'triangle'
+    darkPadOsc1.frequency.setValueAtTime(146.83, now) // D3
+
+    darkPadOsc2 = ctx.createOscillator()
+    darkPadOsc2.type = 'sine'
+    darkPadOsc2.frequency.setValueAtTime(220.0, now) // A3
+
+    darkPadOsc1.connect(padFilter)
+    darkPadOsc2.connect(padFilter)
+    padFilter.connect(darkPadGain)
+    darkPadGain.connect(darkMasterGain)
+
+    darkPadOsc1.start(now)
+    darkPadOsc2.start(now)
+
+    // 3. Melodic Music Box / Crystal Glass Bells arpeggiator
+    melodyStep = 0
+    if (!darkMelodyInterval) {
+      darkMelodyInterval = window.setInterval(() => {
+        if (isMuted || !darkMasterGain) return
+        try {
+          const actx = getAudioContext()
+          const t = actx.currentTime
+
+          const freq = DARK_MELODY_NOTES[melodyStep % DARK_MELODY_NOTES.length]
+          melodyStep = (melodyStep + 1) % DARK_MELODY_NOTES.length
+
+          // Primary crystal bell note
+          const bellOsc = actx.createOscillator()
+          const bellGain = actx.createGain()
+          bellOsc.type = 'sine'
+          bellOsc.frequency.setValueAtTime(freq, t)
+
+          // Soft bell chime envelope
+          bellGain.gain.setValueAtTime(0.001, t)
+          bellGain.gain.linearRampToValueAtTime(0.18, t + 0.015)
+          bellGain.gain.exponentialRampToValueAtTime(0.0001, t + 1.35)
+
+          bellOsc.connect(bellGain)
+          bellGain.connect(darkMasterGain)
+          bellOsc.start(t)
+          bellOsc.stop(t + 1.4)
+
+          // Shimmer harmonic overtone (octave higher, delicate sparkle)
+          const shimmerOsc = actx.createOscillator()
+          const shimmerGain = actx.createGain()
+          shimmerOsc.type = 'triangle'
+          shimmerOsc.frequency.setValueAtTime(freq * 2, t)
+
+          shimmerGain.gain.setValueAtTime(0.001, t)
+          shimmerGain.gain.linearRampToValueAtTime(0.05, t + 0.02)
+          shimmerGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.8)
+
+          shimmerOsc.connect(shimmerGain)
+          shimmerGain.connect(darkMasterGain)
+          shimmerOsc.start(t)
+          shimmerOsc.stop(t + 0.85)
+
+          // Occasional celestial chime on every 8th step (high starlight ping)
+          if (melodyStep % 8 === 0) {
+            const highPing = actx.createOscillator()
+            const highGain = actx.createGain()
+            highPing.type = 'sine'
+            highPing.frequency.setValueAtTime(880.0, t + 0.08) // A5
+            highGain.gain.setValueAtTime(0.001, t + 0.08)
+            highGain.gain.linearRampToValueAtTime(0.09, t + 0.1)
+            highGain.gain.exponentialRampToValueAtTime(0.0001, t + 1.6)
+
+            highPing.connect(highGain)
+            highGain.connect(darkMasterGain)
+            highPing.start(t + 0.08)
+            highPing.stop(t + 1.65)
+          }
+        } catch {
+          // Ignore
+        }
+      }, 620)
+    }
+  } catch (err) {
+    console.warn('Could not start exhibition dark music:', err)
+  }
+}
+
+export function restoreNormalMusic(): void {
+  try {
+    if (darkMelodyInterval) {
+      clearInterval(darkMelodyInterval)
+      darkMelodyInterval = null
+    }
+
+    if (darkMasterGain) {
+      const ctx = getAudioContext()
+      darkMasterGain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.45)
+      setTimeout(() => {
+        try {
+          darkPadOsc1?.stop()
+          darkPadOsc2?.stop()
+          darkPadOsc1?.disconnect()
+          darkPadOsc2?.disconnect()
+          darkPadGain?.disconnect()
+          darkMasterGain?.disconnect()
+        } catch {
+          // Ignore
+        }
+        darkPadOsc1 = null
+        darkPadOsc2 = null
+        darkPadGain = null
+        darkMasterGain = null
+      }, 500)
+    }
+
+    // Resume normal swing jazz music
+    if (jazzAudio && !isMuted) {
+      jazzAudio.volume = 0.35
+      const playPromise = jazzAudio.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {})
+      }
+    }
+  } catch {
+    // Ignore
+  }
+}
+
+// Bat ultrasound screech sound (eerie predator chirp & wing swoosh)
+export function playBatScreech(): void {
+  if (isMuted) return
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sawtooth'
+
+    // High pitched frequency sweep: 2400Hz -> 5200Hz -> 1700Hz
+    osc.frequency.setValueAtTime(2400, now)
+    osc.frequency.linearRampToValueAtTime(5200, now + 0.08)
+    osc.frequency.exponentialRampToValueAtTime(1700, now + 0.22)
+
+    gain.gain.setValueAtTime(0.001, now)
+    gain.gain.linearRampToValueAtTime(0.18, now + 0.04)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.24)
+  } catch {
+    // Ignore
+  }
+}
+
+// Bat bite / teeth crunch impact sound
+export function playBatBite(): void {
+  if (isMuted) return
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+
+    // Sharp chomp click 1
+    const osc1 = ctx.createOscillator()
+    const gain1 = ctx.createGain()
+    osc1.type = 'triangle'
+    osc1.frequency.setValueAtTime(450, now)
+    osc1.frequency.exponentialRampToValueAtTime(90, now + 0.07)
+    gain1.gain.setValueAtTime(0.25, now)
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.07)
+    osc1.connect(gain1)
+    gain1.connect(ctx.destination)
+    osc1.start(now)
+    osc1.stop(now + 0.08)
+
+    // Snap crunch 2 (flesh & fang impact)
+    const osc2 = ctx.createOscillator()
+    const gain2 = ctx.createGain()
+    osc2.type = 'sawtooth'
+    osc2.frequency.setValueAtTime(820, now + 0.03)
+    osc2.frequency.exponentialRampToValueAtTime(140, now + 0.12)
+    gain2.gain.setValueAtTime(0.001, now)
+    gain2.gain.setValueAtTime(0.22, now + 0.03)
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.13)
+    osc2.connect(gain2)
+    gain2.connect(ctx.destination)
+    osc2.start(now + 0.03)
+    osc2.stop(now + 0.14)
   } catch {
     // Ignore
   }

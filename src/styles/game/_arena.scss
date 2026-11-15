@@ -112,6 +112,22 @@
       background: linear-gradient(90deg, #ff1744 0%, #ffd700 100%);
     }
   }
+
+  &.type-darkness {
+    background: radial-gradient(circle at center, rgba(30, 20, 48, 0.96) 0%, rgba(10, 8, 16, 0.98) 100%);
+    border-color: #ffd54f;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 179, 0, 0.4), inset 0 0 16px rgba(171, 71, 188, 0.25);
+
+    .event-banner-title {
+      color: #fff8e1;
+      text-shadow: 0 0 10px rgba(255, 215, 64, 0.8), 0 0 18px rgba(255, 23, 68, 0.6);
+    }
+
+    .event-banner-sub {
+      color: #e1bee7;
+      font-weight: 700;
+    }
+  }
 }
 
 .event-banner-title {

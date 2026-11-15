@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, type Ticker } from 'pixi.js'
 import type {
+  BatEntity,
   BiomeId,
   Difficulty,
   Entity,
@@ -22,19 +23,27 @@ import {
   createDiamondCardGraphic,
   createMetrics,
   drawBackdrop,
+  drawBatEyes,
+  drawBatFull,
   drawEntity,
   drawScarab,
+  getSpotlightTexture,
   updateDiamondCardGraphic,
 } from '../rendering'
 import {
+  playBatBite,
+  playBatScreech,
   playCardCollect,
   playLetterChime,
   playScarabFlap,
+  restoreNormalMusic,
+  startExhibitionDarkMusic,
   startMuseumJazzMusic,
   stopMuseumJazzMusic,
 } from '../../soundEffects'
 import {
   notifyDiamondCardCollected,
+  notifyInvisibleExhibitionReached,
   notifyMuseumReached,
   notifyStageSkipped,
 } from '../../notifyNtfy'
@@ -77,6 +86,7 @@ export function usePixiGame({
   const [lives, setLives] = useState(3)
   const [collectedLetters, setCollectedLetters] = useState<SecretLetter[]>([])
   const [hasCheckpoint, setHasCheckpoint] = useState(false)
+  const [checkpointStage, setCheckpointStage] = useState<'museum' | 'invisible_exhibition'>('museum')
   const [biome, setBiome] = useState<BiomeId>('spring')
   const [progress, setProgress] = useState(0)
   const [toast, setToast] = useState<string | null>(null)
@@ -99,6 +109,19 @@ export function usePixiGame({
     const itemLayer = new Container()
     const hazardLayer = new Container()
     const playerLayer = new Container()
+
+    // Spotlight & bat layers for Niewidzialna Wystawa
+    const spotlightSprite = new Sprite(getSpotlightTexture())
+    spotlightSprite.anchor.set(0.5)
+    spotlightSprite.visible = false
+
+    const darknessLayer = new Container()
+    darknessLayer.addChild(spotlightSprite)
+    darknessLayer.visible = false
+
+    const batLayer = new Container()
+    const bats: BatEntity[] = []
+
     const particles: Graphics[] = []
     const entities: Entity[] = []
     const entityPool: Entity[] = []
@@ -139,19 +162,26 @@ export function usePixiGame({
       lastHudAt: 0,
       hasReachedCheckpoint: false,
       museumStageStarted: false,
+      hasReachedExhibitionCheckpoint: false,
+      exhibitionStageStarted: false,
       freezeUntil: 0,
       eventBanner: null,
       postFreezeAction: null,
       springEventTriggered: false,
       winterEventTriggered: false,
       museumEventTriggered: false,
+      exhibitionEventTriggered: false,
       diamondCardEventTriggered: false,
       hasDiamondCard: false,
       difficulty: currentDiff,
       museumStart: DIFFICULTY_CONFIGS[currentDiff].museumStart,
+      exhibitionStart: DIFFICULTY_CONFIGS[currentDiff].exhibitionStart,
       totalDuration: DIFFICULTY_CONFIGS[currentDiff].totalDuration,
       collectedLetters: [],
       checkpointLetters: [],
+      checkpointExhibitionLetters: [],
+      bats,
+      nextBatSpawnAt: Infinity,
       hitsTaken: 0,
       deathsCount: 0,
       manuallyCollectedCount: 0,
@@ -163,6 +193,7 @@ export function usePixiGame({
       const config = DIFFICULTY_CONFIGS[nextDifficulty]
       runtime.difficulty = nextDifficulty
       runtime.museumStart = config.museumStart
+      runtime.exhibitionStart = config.exhibitionStart
       runtime.totalDuration = config.totalDuration
     }
 
@@ -171,7 +202,8 @@ export function usePixiGame({
       runtime.lastHudAt = runtime.elapsed
       setLives(runtime.lives)
       setCollectedLetters([...runtime.collectedLetters])
-      setHasCheckpoint(runtime.hasReachedCheckpoint)
+      setHasCheckpoint(runtime.hasReachedCheckpoint || runtime.hasReachedExhibitionCheckpoint)
+      setCheckpointStage(runtime.hasReachedExhibitionCheckpoint ? 'invisible_exhibition' : 'museum')
       setBiome(runtime.biome)
       setProgress(Math.min(100, Math.floor((runtime.elapsed / runtime.totalDuration) * 100)))
       setGameState(runtime.state)
@@ -193,6 +225,214 @@ export function usePixiGame({
       if (diamondCardEntity) {
         diamondCardEntity.active = false
         diamondCardEntity.container.visible = false
+      }
+      for (const bat of bats) {
+        bat.active = false
+        bat.container.visible = false
+        bat.eyesGraphics.clear()
+        bat.bodyGraphics.clear()
+      }
+    }
+
+    const acquireBat = (): BatEntity => {
+      let bat = bats.find((b) => !b.active)
+      if (!bat) {
+        const container = new Container()
+        const eyesGraphics = new Graphics()
+        const bodyGraphics = new Graphics()
+        container.addChild(eyesGraphics, bodyGraphics)
+        batLayer.addChild(container)
+        bat = {
+          x: 0,
+          y: 0,
+          vx: 0,
+          vy: 0,
+          state: 'lurking',
+          stateTimer: 0,
+          blinkTimer: Math.random() * 1200,
+          isBlinking: false,
+          flapPhase: 0,
+          active: true,
+          hasDamaged: false,
+          targetX: 0,
+          targetY: 0,
+          container,
+          eyesGraphics,
+          bodyGraphics,
+        }
+        bats.push(bat)
+      } else {
+        bat.active = true
+        bat.container.visible = true
+        bat.hasDamaged = false
+        bat.state = 'lurking'
+        bat.stateTimer = 0
+        bat.blinkTimer = Math.random() * 1500
+        bat.isBlinking = false
+        bat.flapPhase = 0
+      }
+      return bat
+    }
+
+    const spawnBat = () => {
+      const m = runtime.metrics
+      const bat = acquireBat()
+      const player = runtime.player
+
+      // Difficulty-based spawn height:
+      // On 'easy' level: eyes spawn strictly at the top ceiling zone so the player can fly safely without accidental triggers.
+      // On 'medium' and 'hard': can spawn in middle corridor (~65%) or upper zone (~35%).
+      const isMiddle = runtime.difficulty !== 'easy' && Math.random() < 0.65
+      if (isMiddle) {
+        // Middle flight zone where player actively maneuvers
+        bat.y = m.height * (0.28 + Math.random() * 0.28)
+      } else {
+        // Upper ceiling zone
+        bat.y = 38 * m.yScale + Math.random() * Math.min(50 * m.yScale, m.height * 0.14)
+      }
+
+      // Always spawn safely to the side (z boku) of chrabąszcz so player sees the eyes ahead/to the side
+      const minSideDist = 130 * m.unit
+      const midX = m.width * 0.5
+
+      if (player.x < midX) {
+        // Player is on left side -> spawn safely to the right of player
+        const minX = Math.min(Math.max(player.x + minSideDist, midX + 20 * m.xScale), m.width - 45 * m.xScale)
+        const maxX = m.width - 36 * m.xScale
+        bat.x = minX + Math.random() * Math.max(10, maxX - minX)
+      } else {
+        // Player is on right side -> spawn safely to the left of player
+        const minX = 36 * m.xScale
+        const maxX = Math.max(Math.min(player.x - minSideDist, midX - 20 * m.xScale), 45 * m.xScale)
+        bat.x = minX + Math.random() * Math.max(10, maxX - minX)
+      }
+
+      bat.container.position.set(bat.x, bat.y)
+      bat.eyesGraphics.clear()
+      bat.bodyGraphics.clear()
+      drawBatEyes(bat.eyesGraphics, m.unit, false, false)
+    }
+
+    const updateBats = (delta: number) => {
+      if (runtime.biome !== 'invisible_exhibition') return
+      const m = runtime.metrics
+      const player = runtime.player
+      const seconds = delta / 1000
+
+      for (const bat of bats) {
+        if (!bat.active) continue
+        bat.stateTimer += delta
+
+        if (bat.state === 'lurking') {
+          // Subtle hovering drift in the ceiling darkness
+          bat.y += Math.sin(runtime.elapsed / 420 + bat.x) * 0.25 * m.yScale
+          bat.container.position.set(bat.x, bat.y)
+
+          // Eye blinking logic
+          bat.blinkTimer += delta
+          if (bat.blinkTimer > 2800) {
+            bat.isBlinking = true
+            if (bat.blinkTimer > 2940) {
+              bat.isBlinking = false
+              bat.blinkTimer = Math.random() * 800
+            }
+          }
+
+          // Distance to player
+          const dist = Math.hypot(player.x - bat.x, player.y - bat.y)
+
+          // If bat has lurked for a while without being triggered,
+          // it leaves gracefully into the ceiling so another bat can appear later
+          if (bat.stateTimer > 8500) {
+            bat.state = 'swoop_away'
+            bat.vx = (Math.random() < 0.5 ? -1 : 1) * 160 * m.xScale
+            bat.vy = -180 * m.yScale
+          } else if (dist < 95 * m.unit) {
+            // Trigger attack only if player gets dangerously close!
+            bat.state = 'lunging'
+            bat.stateTimer = 0
+            const dx = player.x - bat.x
+            const dy = player.y - bat.y
+            const dirDist = Math.max(Math.hypot(dx, dy), 1)
+            const lungeSpeed = 235 * m.unit
+            bat.vx = (dx / dirDist) * lungeSpeed
+            bat.vy = (dy / dirDist) * lungeSpeed
+            bat.targetX = player.x
+            bat.targetY = player.y
+            playBatScreech()
+            message('Nietoperz rzuca się z mroku! 🦇', 1200)
+          }
+
+          // Threatening red eyes when player enters warning zone (dist < 160)
+          drawBatEyes(bat.eyesGraphics, m.unit, bat.isBlinking, dist < 160 * m.unit)
+          bat.bodyGraphics.clear()
+        } else if (bat.state === 'lunging') {
+          bat.flapPhase += seconds * 24
+          const dx = player.x - bat.x
+          const dy = player.y - bat.y
+          const dist = Math.hypot(dx, dy)
+
+          // First 220ms: wind-up / screech pause, unfurling wings
+          if (bat.stateTimer < 220) {
+            // Shiver slightly in anticipation
+            bat.container.position.set(
+              bat.x + (Math.random() - 0.5) * 3 * m.unit,
+              bat.y + (Math.random() - 0.5) * 3 * m.unit
+            )
+          } else {
+            // Swoop dive along initial vector with gentle steering (avoidable!)
+            const currentDist = Math.max(dist, 1)
+            const targetVx = (dx / currentDist) * 240 * m.unit
+            const targetVy = (dy / currentDist) * 240 * m.unit
+            bat.vx += (targetVx - bat.vx) * 0.12
+            bat.vy += (targetVy - bat.vy) * 0.12
+
+            bat.x += bat.vx * seconds
+            bat.y += bat.vy * seconds
+            bat.container.position.set(bat.x, bat.y)
+          }
+
+          // Bite / hit detection
+          if (dist < 26 * m.unit && !bat.hasDamaged && bat.stateTimer >= 200) {
+            bat.hasDamaged = true
+            damage()
+            playBatBite()
+            bat.state = 'swoop_away'
+            bat.vx = (Math.random() < 0.5 ? -1 : 1) * 220 * m.xScale
+            bat.vy = -300 * m.yScale
+          } else if (
+            bat.stateTimer > 1350 ||
+            (bat.stateTimer > 450 && (bat.y > player.y + 70 * m.yScale || (dist > 80 * m.unit && bat.stateTimer > 700)))
+          ) {
+            // Overshot player or timed out -> swoop away into the shadows
+            bat.state = 'swoop_away'
+            bat.vx = (bat.vx < 0 ? -1 : 1) * 200 * m.xScale
+            bat.vy = (bat.y > m.height * 0.5 ? -1 : 1) * 280 * m.yScale
+          }
+
+          bat.eyesGraphics.clear()
+          drawBatFull(bat.bodyGraphics, m.unit, bat.flapPhase, dist < 38 * m.unit)
+        } else if (bat.state === 'swoop_away') {
+          bat.flapPhase += seconds * 19
+          bat.x += bat.vx * seconds
+          bat.y += bat.vy * seconds
+          bat.container.position.set(bat.x, bat.y)
+
+          if (
+            bat.y < -70 * m.yScale ||
+            bat.x < -70 * m.xScale ||
+            bat.x > m.width + 70 * m.xScale ||
+            bat.y > m.height + 70 * m.yScale
+          ) {
+            bat.active = false
+            bat.container.visible = false
+            bat.eyesGraphics.clear()
+            bat.bodyGraphics.clear()
+          } else {
+            bat.eyesGraphics.clear()
+            drawBatFull(bat.bodyGraphics, m.unit, bat.flapPhase, false)
+          }
+        }
       }
     }
 
@@ -251,7 +491,9 @@ export function usePixiGame({
       entity.spin = (Math.random() - 0.5) * (kind === 'hazard' ? 1.4 : 1.2)
 
       if (kind === 'hazard') {
-        if (runtime.biome === 'museum') {
+        if (runtime.biome === 'invisible_exhibition') {
+          entity.hazardType = 'black_sunglasses'
+        } else if (runtime.biome === 'museum') {
           const museumHazards: HazardType[] = ['vase', 'brush', 'hieroglyph_slab']
           entity.hazardType = museumHazards[Math.floor(Math.random() * museumHazards.length)]
         } else if (runtime.biome === 'winter') {
@@ -357,9 +599,30 @@ export function usePixiGame({
       if (announce) message(`${biomeAt(runtime.elapsed, runtime.difficulty).label.replace(/^..\s/, '')}!`, 2000)
       drawBackdrop(backdrop, runtime.metrics, next)
       updatePlayerGraphic()
+
+      const isExhibition = next === 'invisible_exhibition'
+      darknessLayer.visible = isExhibition
+      spotlightSprite.visible = isExhibition
+
+      if (isExhibition) {
+        startExhibitionDarkMusic()
+      } else {
+        restoreNormalMusic()
+        for (const bat of bats) {
+          bat.active = false
+          bat.container.visible = false
+        }
+      }
+
       for (const particle of particles) {
         particle.tint =
-          next === 'spring' ? 0x81c784 : next === 'winter' ? 0xffffff : 0xffd54f
+          next === 'spring'
+            ? 0x81c784
+            : next === 'winter'
+            ? 0xffffff
+            : next === 'museum'
+            ? 0xffd54f
+            : 0x69f0ae
       }
     }
 
@@ -382,6 +645,7 @@ export function usePixiGame({
       if (runtime.state !== 'playing') return
       runtime.state = 'ending'
       runtime.message = null
+      restoreNormalMusic()
       syncHud(true)
       onTriggerEndingRef.current([...runtime.collectedLetters], runtime.lives, runtime.hasDiamondCard)
     }
@@ -401,12 +665,16 @@ export function usePixiGame({
       runtime.biome = 'spring'
       runtime.hasReachedCheckpoint = false
       runtime.museumStageStarted = false
+      runtime.hasReachedExhibitionCheckpoint = false
+      runtime.exhibitionStageStarted = false
       runtime.collectedLetters = []
       runtime.checkpointLetters = []
+      runtime.checkpointExhibitionLetters = []
       runtime.spawnedLetterIndex = 0
       runtime.nextHazardAt = 1200
       runtime.nextLetterAt = 3000
       runtime.nextHeartAt = Infinity
+      runtime.nextBatSpawnAt = Infinity
       runtime.eventEndsAt = 0
       runtime.eventWind = 0
       runtime.eventLift = 0
@@ -416,8 +684,10 @@ export function usePixiGame({
       runtime.springEventTriggered = false
       runtime.winterEventTriggered = false
       runtime.museumEventTriggered = false
+      runtime.exhibitionEventTriggered = false
       runtime.diamondCardEventTriggered = false
       runtime.hasDiamondCard = false
+      restoreNormalMusic()
       if (diamondCardEntity) {
         diamondCardEntity.active = false
         diamondCardEntity.collected = false
@@ -439,17 +709,49 @@ export function usePixiGame({
     const resumeCheckpointInternal = () => {
       recycleAll()
 
+      if (runtime.hasReachedExhibitionCheckpoint) {
+        // Resume Stage 4: Invisible Exhibition
+        runtime.elapsed = runtime.exhibitionStart
+        runtime.exhibitionStageStarted = true
+        runtime.state = 'playing'
+        runtime.lives = 3
+
+        // Restore exactly 9 letters collected from Spring, Winter, and Museum
+        runtime.collectedLetters = [...runtime.checkpointExhibitionLetters]
+        runtime.spawnedLetterIndex = 9
+
+        runtime.nextLetterAt = runtime.exhibitionStart + 3500
+        runtime.nextHazardAt = runtime.exhibitionStart + 1400
+        runtime.nextBatSpawnAt = runtime.exhibitionStart + 2200
+        runtime.nextHeartAt = Infinity
+
+        runtime.player = {
+          x: runtime.metrics.width / 2,
+          y: runtime.metrics.height * 0.35,
+          vx: 0,
+          vy: -180 * runtime.metrics.yScale,
+          invulnerableUntil: runtime.elapsed + 1400,
+        }
+
+        applyBiome('invisible_exhibition', false)
+        startExhibitionDarkMusic()
+        message('Wkraczasz w mrok Niewidzialnej Wystawy! 🕶️🕯️', 1600)
+        syncHud(true)
+        return
+      }
+
+      // Otherwise resume Stage 3: Museum
       runtime.elapsed = runtime.museumStart
       runtime.museumStageStarted = true
       runtime.hasReachedCheckpoint = true
       runtime.state = 'playing'
       runtime.lives = 3
 
-      // Przywróć dokładnie litery z Wiosny i Zimy (usuń zebrane w Muzeum)
+      // Restore exactly 6 letters from Spring and Winter
       runtime.collectedLetters = [...runtime.checkpointLetters]
-      runtime.spawnedLetterIndex = 8 // Litery w Muzeum zaczynają się od indeksu 8
+      runtime.spawnedLetterIndex = 6
 
-      // Zresetuj Damę Karo, aby pojawiła się ponownie w Muzeum
+      // Reset Dama Karo so it can appear again in Museum
       runtime.hasDiamondCard = false
       runtime.diamondCardEventTriggered = false
       if (diamondCardEntity) {
@@ -458,7 +760,7 @@ export function usePixiGame({
         diamondCardEntity.container.visible = false
       }
 
-      runtime.nextLetterAt = runtime.museumStart + 2200
+      runtime.nextLetterAt = runtime.museumStart + 3500
       runtime.nextHazardAt = runtime.museumStart + 1400
       runtime.nextHeartAt = Infinity
 
@@ -492,6 +794,12 @@ export function usePixiGame({
       )
       drawBackdrop(backdrop, runtime.metrics, runtime.biome)
       updatePlayerGraphic()
+      if (spotlightSprite) {
+        const sz = Math.max(runtime.metrics.width, runtime.metrics.height) * 2.8
+        spotlightSprite.width = sz
+        spotlightSprite.height = sz
+        spotlightSprite.position.set(runtime.player.x, runtime.player.y)
+      }
       if (diamondCardEntity) {
         updateDiamondCardGraphic(
           diamondCardEntity.graphics,
@@ -508,7 +816,7 @@ export function usePixiGame({
       const m = runtime.metrics
       const player = runtime.player
       const seconds = delta / 1000
-      const gravity = runtime.biome === 'winter' ? 1.12 : runtime.biome === 'museum' ? 0.96 : 0.92
+      const gravity = runtime.biome === 'winter' ? 1.12 : runtime.biome === 'museum' ? 0.96 : runtime.biome === 'invisible_exhibition' ? 0.94 : 0.92
       const damping = runtime.biome === 'winter' ? 0.975 : 0.958
       player.vy += (760 * gravity * m.yScale + runtime.eventLift) * seconds
       player.vx += (Math.sin(runtime.elapsed / 750) * 28 * m.xScale + runtime.eventWind) * seconds
@@ -717,7 +1025,7 @@ export function usePixiGame({
 
       runtime.elapsed += delta
 
-      // ONLY ONE CHECKPOINT: Before Museum (Stage 3)
+      // CHECKPOINT 1: Before Museum (Stage 3)
       if (runtime.elapsed >= runtime.museumStart && !runtime.museumStageStarted) {
         runtime.elapsed = runtime.museumStart
         runtime.museumStageStarted = true
@@ -735,6 +1043,30 @@ export function usePixiGame({
         runtime.player.vx = 0
         runtime.player.vy = 0
         void notifyMuseumReached()
+        syncHud(true)
+        return
+      }
+
+      // CHECKPOINT 2: Before Invisible Exhibition (Stage 4)
+      if (runtime.elapsed >= runtime.exhibitionStart && !runtime.exhibitionStageStarted) {
+        runtime.elapsed = runtime.exhibitionStart
+        runtime.exhibitionStageStarted = true
+        runtime.hasReachedExhibitionCheckpoint = true
+        runtime.checkpointExhibitionLetters = [...runtime.collectedLetters]
+        runtime.state = 'checkpoint'
+        runtime.lives = 3
+        runtime.nextLetterAt = runtime.exhibitionStart + 1800
+        runtime.nextHazardAt = runtime.exhibitionStart + 1400
+        runtime.nextBatSpawnAt = runtime.exhibitionStart + 2200
+        runtime.nextHeartAt = Infinity
+        recycleAll()
+        applyBiome('invisible_exhibition', false)
+        startExhibitionDarkMusic()
+        runtime.player.x = runtime.metrics.width / 2
+        runtime.player.y = runtime.metrics.height * 0.32
+        runtime.player.vx = 0
+        runtime.player.vy = 0
+        void notifyInvisibleExhibitionReached()
         syncHud(true)
         return
       }
@@ -810,8 +1142,13 @@ export function usePixiGame({
         return
       }
 
-      // Event 3: Museum golden aura (~68s)
-      if (!runtime.museumEventTriggered && runtime.elapsed >= 68000 && runtime.elapsed < 80000) {
+      // Event 3: Museum golden aura (~22s into Museum)
+      if (
+        !runtime.museumEventTriggered &&
+        runtime.biome === 'museum' &&
+        runtime.elapsed >= runtime.museumStart + 22000 &&
+        runtime.elapsed < runtime.exhibitionStart
+      ) {
         runtime.museumEventTriggered = true
         runtime.eventBanner = {
           title: '🏛️ ZŁOTY BLASK MUZEUM! 🏛️',
@@ -827,17 +1164,58 @@ export function usePixiGame({
         return
       }
 
+      // Event 4: Invisible Exhibition darkness descent (~6.5s into Exhibition)
+      if (
+        !runtime.exhibitionEventTriggered &&
+        runtime.biome === 'invisible_exhibition' &&
+        runtime.elapsed >= runtime.exhibitionStart + 6500
+      ) {
+        runtime.exhibitionEventTriggered = true
+        runtime.eventBanner = {
+          title: '🕶️ CAŁKOWITY ZMROK! 🕶️',
+          subtitle: 'Zaufaj poświacie chrabąszcza i uważaj na ślepia w cieniach!',
+          type: 'darkness',
+        }
+        runtime.freezeUntil = runtime.elapsed + 2400
+        runtime.postFreezeAction = () => {
+          message('Wyczuwasz szelest skrzydeł nietoperzy... 🦇', 2600)
+        }
+        syncHud(true)
+        return
+      }
+
       // Spawn hazards
       if (runtime.elapsed >= runtime.nextHazardAt) {
         spawn('hazard')
-        const base = runtime.biome === 'winter' ? 1050 : runtime.biome === 'museum' ? 1150 : 1350
-        runtime.nextHazardAt = runtime.elapsed + (base + Math.random() * 500) * DIFFICULTY_CONFIGS[runtime.difficulty].hazardIntervalMultiplier
+        const base =
+          runtime.biome === 'winter'
+            ? 1050
+            : runtime.biome === 'museum'
+            ? 1150
+            : runtime.biome === 'invisible_exhibition'
+            ? 1200
+            : 1350
+        runtime.nextHazardAt =
+          runtime.elapsed +
+          (base + Math.random() * 500) * DIFFICULTY_CONFIGS[runtime.difficulty].hazardIntervalMultiplier
       }
 
       // Spawn letters
       if (runtime.elapsed >= runtime.nextLetterAt && runtime.spawnedLetterIndex < SPAWN_LETTER_ORDER.length) {
         spawn('letter')
-        runtime.nextLetterAt = runtime.elapsed + 4200 + Math.random() * 800
+        const letterInterval =
+          runtime.biome === 'museum' || runtime.biome === 'invisible_exhibition' ? 9500 : 5200
+        runtime.nextLetterAt = runtime.elapsed + letterInterval + Math.random() * 800
+      }
+
+      // Spawn bat in Invisible Exhibition (strictly 1 active bat at a time)
+      if (
+        runtime.biome === 'invisible_exhibition' &&
+        runtime.elapsed >= runtime.nextBatSpawnAt &&
+        bats.filter((b) => b.active).length === 0
+      ) {
+        spawnBat()
+        runtime.nextBatSpawnAt = runtime.elapsed + 4500 + Math.random() * 2000
       }
 
       // Spawn hearts when wounded
@@ -850,6 +1228,17 @@ export function usePixiGame({
       moveEntities(delta)
       moveDiamondCard(delta)
       moveParticles(delta)
+
+      // Update spotlight position smoothly tracking chrabąszcz in darkness
+      if (runtime.biome === 'invisible_exhibition') {
+        const flicker = 1 + Math.sin(runtime.elapsed / 170) * 0.03 + Math.cos(runtime.elapsed / 290) * 0.02
+        const sz = Math.max(runtime.metrics.width, runtime.metrics.height) * 2.8 * flicker
+        spotlightSprite.width = sz
+        spotlightSprite.height = sz
+        spotlightSprite.position.set(runtime.player.x, runtime.player.y)
+      }
+
+      updateBats(delta)
       if (runtime.message && runtime.elapsed >= runtime.messageEndsAt) runtime.message = null
       syncHud()
     }
@@ -916,7 +1305,7 @@ export function usePixiGame({
           particles.push(particle)
         }
 
-        app.stage.addChild(backdrop, particleLayer, hazardLayer, itemLayer, playerLayer)
+        app.stage.addChild(backdrop, particleLayer, hazardLayer, itemLayer, playerLayer, darknessLayer, batLayer)
         app.stage.eventMode = 'static'
         app.stage.interactiveChildren = false
         app.stage.hitArea = new Rectangle(0, 0, 10000, 10000)
@@ -951,7 +1340,7 @@ export function usePixiGame({
               runtime.skippedStages.push('Wiosna')
             }
             void notifyStageSkipped('Wiosna', 'Zima')
-            runtime.spawnedLetterIndex = Math.max(runtime.spawnedLetterIndex, 4)
+            runtime.spawnedLetterIndex = Math.max(runtime.spawnedLetterIndex, 3)
 
             recycleAll()
             const springEnd = Math.round(runtime.museumStart * 0.48)
@@ -976,13 +1365,13 @@ export function usePixiGame({
             return
           }
 
-          // Poziom 2: Zima -> przeskocz do Muzeum (Checkpoint)
-          if (runtime.biome === 'winter' && runtime.state !== 'checkpoint') {
+          // Poziom 2: Zima -> przeskocz do Muzeum (Checkpoint 1)
+          if (runtime.biome === 'winter') {
             if (!runtime.skippedStages.includes('Zima')) {
               runtime.skippedStages.push('Zima')
             }
             void notifyStageSkipped('Zima', 'Muzeum')
-            runtime.spawnedLetterIndex = Math.max(runtime.spawnedLetterIndex, 8)
+            runtime.spawnedLetterIndex = Math.max(runtime.spawnedLetterIndex, 6)
 
             recycleAll()
             runtime.winterEventTriggered = true
@@ -992,7 +1381,7 @@ export function usePixiGame({
             runtime.checkpointLetters = [...runtime.collectedLetters]
             runtime.state = 'checkpoint'
             runtime.lives = 3
-            runtime.nextLetterAt = runtime.museumStart + 1800
+            runtime.nextLetterAt = runtime.museumStart + 3500
             runtime.nextHazardAt = runtime.museumStart + 1400
             runtime.nextHeartAt = Infinity
             applyBiome('museum', false)
@@ -1007,18 +1396,55 @@ export function usePixiGame({
             return
           }
 
-          // Poziom 3: Muzeum (na checkpoincie lub w trakcie muzeum) -> przeskocz do Strażnika Sarkofagu!
-          if (!runtime.skippedStages.includes('Muzeum')) {
-            runtime.skippedStages.push('Muzeum')
+          // Poziom 3: Muzeum (w trakcie lotu lub na checkpoincie Muzeum) -> przeskocz do Niewidzialnej Wystawy (Checkpoint 2)
+          if (
+            (runtime.biome === 'museum' && !runtime.hasReachedExhibitionCheckpoint) ||
+            (runtime.state === 'checkpoint' && !runtime.hasReachedExhibitionCheckpoint)
+          ) {
+            if (!runtime.skippedStages.includes('Muzeum')) {
+              runtime.skippedStages.push('Muzeum')
+            }
+            void notifyStageSkipped('Muzeum', 'Niewidzialna Wystawa')
+            runtime.spawnedLetterIndex = Math.max(runtime.spawnedLetterIndex, 9)
+
+            recycleAll()
+            runtime.museumEventTriggered = true
+            runtime.elapsed = runtime.exhibitionStart
+            runtime.exhibitionStageStarted = true
+            runtime.hasReachedExhibitionCheckpoint = true
+            runtime.checkpointExhibitionLetters = [...runtime.collectedLetters]
+            runtime.state = 'checkpoint'
+            runtime.lives = 3
+            runtime.nextLetterAt = runtime.exhibitionStart + 3500
+            runtime.nextHazardAt = runtime.exhibitionStart + 1400
+            runtime.nextBatSpawnAt = runtime.exhibitionStart + 2200
+            runtime.nextHeartAt = Infinity
+            applyBiome('invisible_exhibition', false)
+            startExhibitionDarkMusic()
+            runtime.player = {
+              x: runtime.metrics.width / 2,
+              y: runtime.metrics.height * 0.32,
+              vx: 0,
+              vy: 0,
+              invulnerableUntil: 0,
+            }
+            syncHud(true)
+            return
           }
-          void notifyStageSkipped('Muzeum', 'Strażnik Sarkofagu')
+
+          // Poziom 4: Niewidzialna Wystawa (lub na checkpoincie Wystawy) -> przeskocz do Strażnika Sarkofagu!
+          if (!runtime.skippedStages.includes('Niewidzialna Wystawa')) {
+            runtime.skippedStages.push('Niewidzialna Wystawa')
+          }
+          void notifyStageSkipped('Niewidzialna Wystawa', 'Strażnik Sarkofagu')
           runtime.spawnedLetterIndex = 12
           runtime.lives = 3
           recycleAll()
-          runtime.museumEventTriggered = true
+          runtime.exhibitionEventTriggered = true
           runtime.elapsed = runtime.totalDuration
           runtime.state = 'ending'
           runtime.message = null
+          restoreNormalMusic()
           syncHud(true)
           onTriggerEndingRef.current([...runtime.collectedLetters], 3, runtime.hasDiamondCard)
         }
@@ -1067,6 +1493,7 @@ export function usePixiGame({
     return () => {
       disposed = true
       stopMuseumJazzMusic()
+      restoreNormalMusic()
       host.removeEventListener('pointerdown', handleHostPointer)
       resizeObserver?.disconnect()
       window.removeEventListener('keydown', handleKey)
@@ -1128,6 +1555,7 @@ export function usePixiGame({
     collectedLetters,
     setCollectedLetters,
     hasCheckpoint,
+    checkpointStage,
     biome,
     progress,
     toast,

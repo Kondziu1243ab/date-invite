@@ -3,6 +3,7 @@ import { DIFFICULTY_CONFIGS } from '../constants'
 
 export type GameOverModalProps = {
   hasCheckpoint: boolean
+  checkpointStage?: 'museum' | 'invisible_exhibition'
   difficulty: Difficulty
   onSelectDifficulty: (difficulty: Difficulty) => void
   onResumeCheckpoint: () => void
@@ -12,21 +13,26 @@ export type GameOverModalProps = {
 
 export function GameOverModal({
   hasCheckpoint,
+  checkpointStage = 'museum',
   difficulty,
   onSelectDifficulty,
   onResumeCheckpoint,
   onRestart,
   onSkip,
 }: GameOverModalProps) {
+  const isExhibition = checkpointStage === 'invisible_exhibition'
+  const resumeLabel = isExhibition ? 'Wróć na Niewidzialną Wystawę 🕶️' : 'Wróć do Muzeum 🏛️'
+  const descText = hasCheckpoint
+    ? isExhibition
+      ? 'Możesz wznowić grę bezpośrednio od Niewidzialnej Wystawy!'
+      : 'Możesz wznowić grę bezpośrednio od wejścia do Muzeum!'
+    : 'Skarabeusz może spróbować ponownie od początku.'
+
   return (
     <div className="game-overlay">
       <div className="game-modal-card">
         <h3 className="modal-heading">Koniec lotu!</h3>
-        <p className="modal-text">
-          {hasCheckpoint
-            ? 'Możesz wznowić grę bezpośrednio od wejścia do Muzeum!'
-            : 'Skarabeusz może spróbować ponownie od początku.'}
-        </p>
+        <p className="modal-text">{descText}</p>
 
         <div
           className="game-difficulty-selector gameover-difficulty-selector"
@@ -61,7 +67,7 @@ export function GameOverModal({
                 className="game-primary-btn"
                 onClick={onResumeCheckpoint}
               >
-                Wróć do Muzeum 🏛️
+                {resumeLabel}
               </button>
               <button
                 type="button"
