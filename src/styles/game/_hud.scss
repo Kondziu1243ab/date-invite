@@ -1,0 +1,244 @@
+@use '../variables' as *;
+
+.game-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+}
+
+.game-lives {
+  display: flex;
+  gap: 4px;
+  font-size: 1.25rem;
+}
+
+.game-heart {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+
+  &.heart-alive {
+    filter: drop-shadow(0 2px 4px rgba(233, 30, 99, 0.3));
+  }
+
+  &.heart-lost {
+    opacity: 0.3;
+    filter: grayscale(1);
+  }
+}
+
+.game-stage-pill {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: $pink-dark;
+  background: $pink-light;
+  padding: 4px 12px;
+  border-radius: 14px;
+  transition: all 0.8s ease;
+}
+
+.veil-game-wrapper:has(.spring) .game-stage-pill {
+  color: $spring-green;
+  background: $spring-bg;
+}
+
+.veil-game-wrapper:has(.winter) .game-stage-pill {
+  color: $winter-blue;
+  background: $winter-bg;
+}
+
+.veil-game-wrapper:has(.museum) .game-stage-pill {
+  color: $gold-bright;
+  background: #3e2e1a;
+  border: 1px solid $gold-primary;
+}
+
+.game-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.game-audio-btn {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: $radius-pill;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: transform 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    transform: scale(1.1);
+    background: #ffffff;
+  }
+}
+
+.game-pause-btn {
+  border: 0;
+  border-radius: $radius-pill;
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: #f0ebe3;
+  color: $text-muted;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #e4ddd3;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.game-skip-hud-btn {
+  border: 1px solid rgba(173, 20, 87, 0.2);
+  border-radius: $radius-pill;
+  padding: 5px 9px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: #fff0f3;
+  color: #ad1457;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #fce4ec;
+    transform: scale(1.04);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.game-progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.game-progress-bar {
+  flex: 1;
+  height: 8px;
+  background: #f3e5f5;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(225, 190, 231, 0.6);
+}
+
+.game-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff80ab 0%, #ba68c8 50%, #4fc3f7 100%);
+  border-radius: 6px;
+  transition: width 0.15s linear;
+}
+
+.game-letter-counter {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #ad1457;
+  white-space: nowrap;
+}
+
+.game-goal-icon {
+  font-size: 1.25rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+.game-letters-shelf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #f0e6e6;
+  border-radius: 12px;
+  margin-bottom: 6px;
+  min-height: 32px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.letters-shelf-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #757575;
+  white-space: nowrap;
+}
+
+.letters-shelf-chips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.shelf-empty-hint {
+  font-size: 0.72rem;
+  color: #9e9e9e;
+  font-style: italic;
+}
+
+.letter-shelf-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, $pink-accent 0%, #ad1457 100%);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(173, 20, 87, 0.3);
+  animation: chip-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.game-card-collected-chip {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: $radius-pill;
+  background: linear-gradient(135deg, #d32f2f 0%, #880e4f 100%);
+  border: 1.5px solid #ffd54f;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(211, 47, 47, 0.45), 0 0 10px rgba(255, 213, 79, 0.35);
+  animation: chip-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: default;
+
+  .card-chip-symbol {
+    font-size: 0.82rem;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+  }
+
+  .card-chip-img {
+    width: 14px;
+    height: 20px;
+    object-fit: cover;
+    border-radius: 3px;
+    border: 1px solid #ffd54f;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  }
+
+  .card-chip-text {
+    letter-spacing: 0.02em;
+  }
+}
+
+@keyframes chip-pop {
+  0% { transform: scale(0.3); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}

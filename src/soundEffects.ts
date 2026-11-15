@@ -198,6 +198,44 @@ export function playSarcophagusOpen(): void {
   playDoorStoneOpen()
 }
 
+// Metallic key insertion and lock turning click
+export function playKeyTurn(): void {
+  if (isMuted) return
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+
+    // Key insertion metallic scrape
+    const osc1 = ctx.createOscillator()
+    const gain1 = ctx.createGain()
+    osc1.type = 'triangle'
+    osc1.frequency.setValueAtTime(1200, now)
+    osc1.frequency.exponentialRampToValueAtTime(600, now + 0.12)
+    gain1.gain.setValueAtTime(0.12, now)
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.14)
+    osc1.connect(gain1)
+    gain1.connect(ctx.destination)
+    osc1.start(now)
+    osc1.stop(now + 0.15)
+
+    // Key turning click & ancient lock release chime
+    const osc2 = ctx.createOscillator()
+    const gain2 = ctx.createGain()
+    osc2.type = 'sine'
+    osc2.frequency.setValueAtTime(587.33, now + 0.28) // D5
+    osc2.frequency.exponentialRampToValueAtTime(1174.66, now + 0.48) // D6
+    gain2.gain.setValueAtTime(0.001, now + 0.28)
+    gain2.gain.linearRampToValueAtTime(0.2, now + 0.32)
+    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.75)
+    osc2.connect(gain2)
+    gain2.connect(ctx.destination)
+    osc2.start(now + 0.28)
+    osc2.stop(now + 0.8)
+  } catch {
+    // Ignore
+  }
+}
+
 // Sparkle / crystal chime when a letter is collected or flies into its slot
 export function playLetterChime(index = 0): void {
   if (isMuted) return
@@ -219,6 +257,63 @@ export function playLetterChime(index = 0): void {
     gain.connect(ctx.destination)
     osc.start()
     osc.stop(now + 0.7)
+  } catch {
+    // Ignore
+  }
+}
+
+// Lucky Queen of Diamonds collected chime (majestic harp arpeggio)
+export function playCardCollect(): void {
+  if (isMuted) return
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+    const arpeggio = [659.25, 830.61, 987.77, 1318.51, 1661.22] // E5, G#5, B5, E6, G#6
+
+    arpeggio.forEach((freq, idx) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, now + idx * 0.055)
+
+      gain.gain.setValueAtTime(0.001, now + idx * 0.055)
+      gain.gain.linearRampToValueAtTime(0.2, now + idx * 0.055 + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.055 + 0.7)
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(now + idx * 0.055)
+      osc.stop(now + idx * 0.055 + 0.75)
+    })
+  } catch {
+    // Ignore
+  }
+}
+
+// Lucky Queen of Diamonds activation sound (magical card shimmer & whoosh)
+export function playCardUse(): void {
+  if (isMuted) return
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+
+    // High sparkling bells
+    const bells = [880.0, 1174.66, 1567.98, 2093.0]
+    bells.forEach((freq, idx) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(freq, now + idx * 0.04)
+
+      gain.gain.setValueAtTime(0.001, now + idx * 0.04)
+      gain.gain.linearRampToValueAtTime(0.18, now + idx * 0.04 + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.04 + 0.55)
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(now + idx * 0.04)
+      osc.stop(now + idx * 0.04 + 0.6)
+    })
   } catch {
     // Ignore
   }

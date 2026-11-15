@@ -1,0 +1,811 @@
+@use '../variables' as *;
+
+.guardian-dialogue-stage {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  padding: 1.2rem 1.1rem;
+  background: radial-gradient(circle at 50% 25%, #3d2714 0%, #1c1107 60%, #0d0803 100%);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  animation: reveal-card-in 0.4s ease-out forwards;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 215, 0, 0.3) transparent;
+
+  &.shake-wrong {
+    animation: wrong-shake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+}
+
+@keyframes reveal-card-in {
+  0% { transform: scale(0.92) translateY(18px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes wrong-shake {
+  10%, 90% { transform: translate3d(-3px, 0, 0); }
+  20%, 80% { transform: translate3d(4px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
+  40%, 60% { transform: translate3d(5px, 0, 0); }
+}
+
+/* ------------------------------------------------------------- */
+/* 1. Ekran wstępny (Intro Dżina) */
+/* ------------------------------------------------------------- */
+.guardian-intro-card {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  background: radial-gradient(circle at 50% 25%, #3d2714 0%, #1c1107 60%, #0d0803 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  padding: 1.2rem 1.4rem;
+  gap: 8px;
+}
+
+.guardian-intro-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.guardian-name-badge {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #ffd54f;
+  background: #382411;
+  padding: 3px 12px;
+  border-radius: $radius-pill;
+  border: 1px solid #8d6e12;
+}
+
+.guardian-intro-title {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 900;
+  color: $gold-bright;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.guardian-intro-subtitle {
+  margin: 0;
+  font-size: 0.98rem;
+  color: #ffecb3;
+  font-weight: 600;
+}
+
+.guardian-intro-genie-preview {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 0;
+
+  .genie-viewport {
+    transform: scale(1.08);
+  }
+}
+
+.guardian-intro-body {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.guardian-intro-description {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: $gold-light;
+
+  strong {
+    color: #fff;
+  }
+}
+
+.guardian-intro-hearts-reminder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255, 215, 0, 0.25);
+}
+
+.guardian-intro-card-reminder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(183, 28, 28, 0.25);
+  border: 1.5px solid #ff5252;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(255, 23, 68, 0.25);
+  text-align: left;
+  margin-top: 2px;
+
+  .card-reminder-icon {
+    font-size: 1.45rem;
+    filter: drop-shadow(0 0 6px #ff1744);
+  }
+
+  .card-reminder-thumb {
+    width: 32px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1.5px solid #ffd54f;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 215, 0, 0.4);
+    flex-shrink: 0;
+  }
+
+  .card-reminder-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .card-reminder-title {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #ffebee;
+  }
+
+  .card-reminder-desc {
+    font-size: 0.74rem;
+    color: #ffcdd2;
+  }
+}
+
+.reminder-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffcc80;
+}
+
+.reminder-hearts {
+  display: flex;
+  gap: 8px;
+  font-size: 1.3rem;
+
+  .heart-full {
+    animation: heart-beat 1.5s ease-in-out infinite;
+  }
+}
+
+.reminder-subtext {
+  font-size: 0.78rem;
+  color: #ffab91;
+  font-style: italic;
+}
+
+.guardian-start-btn,
+.guardian-defeat-btn {
+  width: 100%;
+  max-width: 360px;
+  padding: 13px 18px;
+  background: linear-gradient(135deg, $gold-bright 0%, #ff8f00 100%);
+  color: #1a0f02;
+  font-size: 1.12rem;
+  font-weight: 800;
+  border: 2px solid #ffffff;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(255, 179, 0, 0.45);
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(255, 215, 0, 0.7);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.98);
+  }
+}
+
+/* ------------------------------------------------------------- */
+/* 2. Pasek statusu u góry panelu zagadek */
+/* ------------------------------------------------------------- */
+.guardian-top-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.guardian-hearts-indicator {
+  display: flex;
+  gap: 6px;
+  font-size: 1.35rem;
+
+  .heart-alive {
+    display: inline-block;
+    animation: heart-beat 1.8s ease-in-out infinite;
+  }
+
+  .heart-dead {
+    opacity: 0.35;
+    filter: grayscale(1);
+  }
+}
+
+@keyframes heart-beat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.22); }
+  30% { transform: scale(1); }
+  45% { transform: scale(1.14); }
+}
+
+.guardian-question-counter {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: $gold-bright;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 12px;
+  border-radius: $radius-pill;
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  letter-spacing: 0.05em;
+}
+
+.guardian-card-hud-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: $radius-pill;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  background: rgba(0, 0, 0, 0.6);
+
+  .card-hud-symbol {
+    font-size: 1rem;
+    line-height: 1;
+    filter: drop-shadow(0 0 4px #ff1744);
+  }
+
+  .card-hud-thumb {
+    width: 17px;
+    height: 24px;
+    object-fit: cover;
+    border-radius: 3px;
+    border: 1px solid #ffd54f;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    flex-shrink: 0;
+  }
+
+  .card-hud-name {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #ffebee;
+  }
+
+  .card-hud-status {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: $radius-pill;
+  }
+
+  &.card-ready {
+    background: linear-gradient(135deg, rgba(183, 28, 28, 0.85) 0%, rgba(90, 10, 20, 0.9) 100%);
+    border-color: #ffd700;
+    box-shadow: 0 0 14px rgba(255, 23, 68, 0.5), inset 0 0 8px rgba(255, 215, 0, 0.3);
+    animation: lucky-card-pulse 2s ease-in-out infinite;
+
+    .card-hud-status {
+      background: #ffd700;
+      color: #1a0f02;
+    }
+
+    &:hover:not(:disabled) {
+      transform: scale(1.06);
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+  }
+
+  &.card-used {
+    background: rgba(30, 20, 15, 0.65);
+    border-color: rgba(255, 215, 0, 0.3);
+    opacity: 0.75;
+    cursor: default;
+
+    .card-hud-status {
+      background: rgba(255, 215, 0, 0.2);
+      color: #ffd54f;
+    }
+  }
+}
+
+@keyframes lucky-card-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(255, 23, 68, 0.4), inset 0 0 6px rgba(255, 215, 0, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(255, 23, 68, 0.75), 0 0 8px rgba(255, 215, 0, 0.6), inset 0 0 10px rgba(255, 215, 0, 0.4);
+    transform: scale(1.03);
+  }
+}
+
+.guardian-card-action-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  max-width: 95%;
+  margin: 0 auto 6px auto;
+  padding: 5px 13px;
+  background: linear-gradient(135deg, rgba(198, 40, 40, 0.92) 0%, rgba(136, 14, 79, 0.95) 100%);
+  border: 1.5px solid #ffd54f;
+  border-radius: $radius-pill;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(211, 47, 47, 0.5), 0 0 12px rgba(255, 213, 79, 0.35);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: banner-enter 0.35s ease-out forwards;
+
+  .card-banner-icon {
+    font-size: 0.95rem;
+    filter: drop-shadow(0 0 4px #ff1744);
+  }
+
+  .card-action-thumb {
+    width: 17px;
+    height: 24px;
+    object-fit: cover;
+    border-radius: 3px;
+    border: 1px solid #ffd54f;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    flex-shrink: 0;
+  }
+
+  .card-banner-text {
+    letter-spacing: 0.02em;
+  }
+
+  .card-banner-sparkle {
+    font-size: 0.85rem;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 6px 20px rgba(255, 215, 0, 0.65);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0) scale(0.97);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.guardian-card-active-hint {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #ffd54f;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 3px 12px;
+  border-radius: $radius-pill;
+  border: 1px dashed rgba(255, 215, 0, 0.4);
+  margin: 0 auto 5px auto;
+  display: inline-block;
+  animation: chip-pop 0.3s ease-out;
+}
+
+/* ------------------------------------------------------------- */
+/* 3. Dżin i niezależne animowane dłonie */
+/* ------------------------------------------------------------- */
+.guardian-genie-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 185px;
+}
+
+.genie-stage {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.genie-viewport {
+  position: relative;
+  width: 210px;
+  height: 175px;
+}
+
+.genie-main-svg {
+  width: 100%;
+  height: 100%;
+  animation: genie-cloud-float 3.4s ease-in-out infinite alternate;
+}
+
+@keyframes genie-cloud-float {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(-1deg); }
+  100% { transform: translateY(-9px) rotate(1deg); }
+}
+
+/* ------------------------------------------------------------- */
+/* OSOBNE DŁONIE (DETACHED HANDS) */
+/* ------------------------------------------------------------- */
+.genie-hand {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  pointer-events: none;
+  z-index: 10;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+}
+
+.genie-hand-left {
+  left: 18px;
+  top: 92px;
+  transform-origin: 30px 38px;
+}
+
+.genie-hand-right {
+  right: 18px;
+  top: 92px;
+  transform-origin: 30px 38px;
+}
+
+.hand-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Animacja spoczynkowa (Idle) */
+.genie-hand-left.hand-mood-idle,
+.genie-hand-left.hand-mood-warning,
+.genie-hand-left.hand-mood-playful {
+  animation: hand-idle-left 3.2s ease-in-out infinite alternate;
+}
+
+.genie-hand-right.hand-mood-idle {
+  animation: hand-idle-right 2.9s ease-in-out infinite alternate;
+}
+
+@keyframes hand-idle-left {
+  0% { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(-7px) rotate(-8deg); }
+}
+
+@keyframes hand-idle-right {
+  0% { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(-7px) rotate(8deg); }
+}
+
+/* Animacja błędu: Machanie rękami (Angry Flailing - czytelne, komiczne) */
+.genie-hand-left.hand-mood-wrong {
+  animation: hand-flail-left 0.44s ease-in-out infinite alternate !important;
+}
+
+.genie-hand-right.hand-mood-wrong {
+  animation: hand-flail-right 0.4s ease-in-out infinite alternate !important;
+}
+
+@keyframes hand-flail-left {
+  0% { transform: translateY(-16px) rotate(-26deg) scale(1.08); }
+  100% { transform: translateY(12px) rotate(16deg) scale(0.96); }
+}
+
+@keyframes hand-flail-right {
+  0% { transform: translateY(12px) rotate(-16deg) scale(0.96); }
+  100% { transform: translateY(-16px) rotate(26deg) scale(1.08); }
+}
+
+/* Animacja żartu / ostrzeżenia: Machanie palcem (Finger Wag - płynne, czytelne) */
+.genie-hand-right.hand-mood-warning,
+.genie-hand-right.hand-mood-playful {
+  animation: finger-wag 0.55s ease-in-out infinite alternate !important;
+}
+
+@keyframes finger-wag {
+  0% { transform: rotate(-22deg) translateY(-5px); }
+  100% { transform: rotate(22deg) translateY(-5px); }
+}
+
+/* Animacja sukcesu / oklasków (Clapping / Cheer) */
+.genie-hand-left.hand-mood-correct,
+.genie-hand-left.hand-mood-triumph {
+  animation: hand-clap-left 0.46s ease-in-out infinite alternate !important;
+}
+
+.genie-hand-right.hand-mood-correct,
+.genie-hand-right.hand-mood-triumph {
+  animation: hand-clap-right 0.46s ease-in-out infinite alternate !important;
+}
+
+@keyframes hand-clap-left {
+  0% { transform: translateX(0) scale(1); }
+  100% { transform: translateX(24px) scale(1.12) rotate(12deg); }
+}
+
+@keyframes hand-clap-right {
+  0% { transform: translateX(0) scale(1); }
+  100% { transform: translateX(-24px) scale(1.12) rotate(-12deg); }
+}
+
+/* ------------------------------------------------------------- */
+/* 4. Dymek dialogowy Dżina (Speech Bubble przy głowie) */
+/* ------------------------------------------------------------- */
+.genie-speech-bubble {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(310px, 86vw);
+  background: #fffde7;
+  color: #3e2723;
+  padding: 8px 14px;
+  border-radius: 14px;
+  border: 2px solid $gold-primary;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), 0 0 16px rgba(255, 215, 0, 0.35);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.35;
+  z-index: 40;
+  pointer-events: none;
+  animation: bubble-pop 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  .bubble-tail {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 8px solid $gold-primary;
+  }
+
+  &.bubble-warning,
+  &.bubble-playful {
+    background: #fffde7;
+    border-color: #ffa000;
+    color: #3e2723;
+
+    .bubble-tail {
+      border-top-color: #ffa000;
+    }
+  }
+
+  &.bubble-wrong {
+    background: #ffebee;
+    border-color: #ef5350;
+    color: #b71c1c;
+
+    .bubble-tail {
+      border-top-color: #ef5350;
+    }
+  }
+
+  &.bubble-correct,
+  &.bubble-triumph {
+    background: #e8f5e9;
+    border-color: #4caf50;
+    color: #1b5e20;
+
+    .bubble-tail {
+      border-top-color: #4caf50;
+    }
+  }
+
+  .bubble-text {
+    margin: 0;
+    text-shadow: none;
+  }
+}
+
+@keyframes bubble-pop {
+  0% { transform: translateX(-50%) scale(0.85) translateY(-4px); opacity: 0; }
+  100% { transform: translateX(-50%) scale(1) translateY(0); opacity: 1; }
+}
+
+/* ------------------------------------------------------------- */
+/* 5. Panel pytań i przyciski odpowiedzi */
+/* ------------------------------------------------------------- */
+.guardian-question-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.question-slide {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  animation: slide-fade 0.3s ease-out;
+}
+
+@keyframes slide-fade {
+  0% { transform: translateY(8px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.guardian-question-prompt {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.4;
+  color: $gold-light;
+
+  strong {
+    color: $gold-bright;
+    font-size: 1.08rem;
+  }
+}
+
+.question-answers-stack {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.question-answers-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.guardian-ans-btn {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #372818 0%, #21170d 100%);
+  border: 1.5px solid $gold-primary;
+  border-radius: 12px;
+  color: #fff8e1;
+  font-size: 0.98rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: all 0.16s ease;
+
+  .ans-emoji {
+    font-size: 1.15rem;
+  }
+
+  &:hover:not(:disabled) {
+    background: #ffd54f;
+    color: #1a0f02;
+    border-color: #fff;
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 16px rgba(255, 215, 0, 0.5);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+  }
+
+  &.btn-selected {
+    background: linear-gradient(135deg, $gold-bright 0%, #ff8f00 100%);
+    color: #1a0f02;
+    border-color: #fff;
+    box-shadow: 0 0 18px rgba(255, 215, 0, 0.8);
+    transform: scale(1.03);
+  }
+}
+
+.ans-grid-btn {
+  height: 48px;
+  font-size: 0.94rem;
+}
+
+/* ------------------------------------------------------------- */
+/* 6. Skala 1 do 10 (Pytanie 3) */
+/* ------------------------------------------------------------- */
+.hot-scale-picker {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.hot-scale-btn {
+  height: 40px;
+  background: linear-gradient(180deg, #372a1b 0%, #20170e 100%);
+  border: 1.5px solid $gold-primary;
+  border-radius: 10px;
+  color: $gold-light;
+  font-size: 1.12rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #ffd54f;
+    color: #241a12;
+    border-color: #fff;
+    transform: translateY(-2px) scale(1.06);
+    box-shadow: 0 6px 16px rgba(255, 215, 0, 0.6);
+  }
+
+  &.btn-selected {
+    background: linear-gradient(135deg, $gold-bright 0%, #ff8f00 100%);
+    color: #1a0f02;
+    border-color: #ffffff;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.85);
+    transform: scale(1.08);
+  }
+}
+
+/* ------------------------------------------------------------- */
+/* 7. Ekran porażki (Defeat Card) */
+/* ------------------------------------------------------------- */
+.guardian-defeat-card {
+  gap: 14px;
+}
+
+.defeat-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.defeat-heading {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #ef5350;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.defeat-text {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #ffebee;
+}

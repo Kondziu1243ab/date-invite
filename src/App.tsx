@@ -1,30 +1,36 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import FleeingButton from './FleeingButton'
 import VeilGame, { type VeilGameResult } from './VeilGame'
-import InstagramForm from './InstagramForm'
-import { notifyGameCompleted, notifyInstagramSubmitted } from './notifyNtfy'
+import { notifyGameCompleted, notifyInviteAccepted } from './notifyNtfy'
 import { inviteName } from './config'
 import { stopMuseumJazzMusic } from './soundEffects'
-import './App.css'
+import './styles/main.scss'
 
 const CAT_GIF_URL = '/krolik.gif'
 
-type Step = 'invite' | 'game' | 'instagram' | 'success'
+type Step = 'invite' | 'game' | 'success'
 
 export default function App() {
   const [step, setStep] = useState<Step>('invite')
+
+  // Prefetch obrazu muzeum od razu przy starcie aplikacji
+  useEffect(() => {
+    const preloader = new Image()
+    preloader.src = '/muzeum-wejscie.jpg'
+  }, [])
 
   function handleGameComplete(result: VeilGameResult) {
     void notifyGameCompleted({
       lettersCollected: result.lettersCollected,
       totalLetters: result.totalLetters,
       difficulty: result.difficultyLabel,
+      skippedStages: result.skippedStages,
+      manuallyCollectedCount: result.manuallyCollectedCount,
+      hitsTaken: result.hitsTaken,
+      deathsCount: result.deathsCount,
+      guardianAttempts: result.guardianAttempts,
+      totalPlayTimeSeconds: result.totalPlayTimeSeconds,
     })
-    setStep('instagram')
-  }
-
-  function handleInstagramComplete(instagram: string) {
-    void notifyInstagramSubmitted(instagram)
     stopMuseumJazzMusic()
     setStep('success')
   }
@@ -37,13 +43,16 @@ export default function App() {
           <>
             <img className="cat-gif" src={CAT_GIF_URL} alt="Słodkie zaproszenie" />
             <p className="invite-text text-center">
-              Hej {inviteName}, czy umówisz się ze mną na randkę?
+              Hej {inviteName}, czy szalejesz za mną?
             </p>
             <div className="button-row">
               <button
                 type="button"
                 className="btn btn-tak"
-                onClick={() => setStep('game')}
+                onClick={() => {
+                  void notifyInviteAccepted()
+                  setStep('game')
+                }}
               >
                 Tak 💕
               </button>
@@ -59,15 +68,10 @@ export default function App() {
           />
         )}
 
-        {/* Step 3: Formularz Instagrama z animowanym ludzikiem i kopertą */}
-        {step === 'instagram' && (
-          <InstagramForm onComplete={handleInstagramComplete} />
-        )}
-
-        {/* Step 4: Czysty biały ekran z napisem po Instagramie */}
+        {/* Step 3: Czysty biały ekran z napisem po zakończeniu gry */}
         {step === 'success' && (
           <div className="white-screen-message-container">
-            <h1 className="white-screen-heading">Dzięki, odezwę się na instagramie ✨</h1>
+            <h1 className="white-screen-heading">Dzięki !</h1>
           </div>
         )}
       </div>

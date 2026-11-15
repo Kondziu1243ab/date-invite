@@ -1,0 +1,229 @@
+@use 'variables' as *;
+
+.instagram-step {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.anim-stage-container {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  background: linear-gradient(180deg, #fff0f3 0%, #ffe5ec 100%);
+  border-radius: 16px;
+  border: 2px dashed $pink-accent;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(244, 143, 177, 0.15);
+}
+
+.anim-bg-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.bg-heart {
+  position: absolute;
+  font-size: 1rem;
+  opacity: 0.25;
+}
+
+.heart-1 {
+  top: 20px;
+  left: 15%;
+  animation: float-slow 3s infinite alternate ease-in-out;
+}
+
+.heart-2 {
+  top: 40px;
+  right: 15%;
+  animation: float-slow 4s infinite alternate ease-in-out 1s;
+}
+
+.heart-3 {
+  bottom: 25px;
+  left: 45%;
+  animation: float-slow 5s infinite alternate ease-in-out 0.5s;
+}
+
+@keyframes float-slow {
+  0% { transform: translateY(0) scale(0.9); }
+  100% { transform: translateY(-8px) scale(1.1); }
+}
+
+.ludzik {
+  position: absolute;
+  bottom: 5px;
+  left: -80px;
+  width: 70px;
+  height: 84px;
+  z-index: 10;
+  transition: left 1.2s linear;
+
+  &.stage-entering,
+  &.stage-grabbing {
+    left: calc(50% - 70px);
+  }
+
+  &.stage-walking,
+  &.stage-packing,
+  &.stage-flying,
+  &.stage-done {
+    left: calc(80% - 65px);
+  }
+
+  &.stage-walking {
+    transition: left 1.2s linear;
+  }
+
+  &.walking-anim {
+    .left-foot {
+      animation: step-left 0.25s infinite alternate ease-in-out;
+      transform-origin: 40px 110px;
+    }
+
+    .right-foot {
+      animation: step-right 0.25s infinite alternate ease-in-out;
+      transform-origin: 60px 110px;
+    }
+
+    .ludzik-svg {
+      animation: body-bob 0.25s infinite alternate ease-in-out;
+    }
+  }
+
+  &.stage-grabbing .right-arm,
+  &.stage-walking .right-arm {
+    transform: rotate(-65deg) translate(-2px, -4px);
+    transform-origin: 72px 65px;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  &.stage-packing .right-arm {
+    transform: rotate(-10deg);
+    transform-origin: 72px 65px;
+    transition: transform 0.4s ease;
+  }
+
+  &.stage-flying .right-arm {
+    animation: wave-goodbye 0.25s infinite alternate ease-in-out;
+    transform-origin: 72px 65px;
+  }
+}
+
+@keyframes step-left {
+  0% { transform: translateY(0) scaleY(1); }
+  100% { transform: translateY(-5px) scaleY(0.8); }
+}
+
+@keyframes step-right {
+  0% { transform: translateY(-5px) scaleY(0.8); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+
+@keyframes body-bob {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-4px); }
+}
+
+@keyframes wave-goodbye {
+  0% { transform: rotate(-30deg); }
+  100% { transform: rotate(-75deg); }
+}
+
+.floating-text-bubble {
+  position: absolute;
+  background: $pink-accent;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  box-shadow: 0 4px 12px rgba(244, 143, 177, 0.4);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 12;
+  transform: translateX(-50%) scale(0);
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  &.stage-entering {
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%) scale(1);
+  }
+
+  &.stage-grabbing {
+    bottom: 50px;
+    left: calc(50% - 15px);
+    transform: translateX(-50%) scale(1);
+    transition: bottom 0.5s cubic-bezier(0.25, 1, 0.5, 1), left 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  &.stage-walking {
+    bottom: 50px;
+    left: calc(80% - 10px);
+    transform: translateX(-50%) scale(1);
+    transition: left 1.2s linear, bottom 0.5s ease;
+  }
+
+  &.stage-packing {
+    bottom: 35px;
+    left: 80%;
+    transform: translateX(-50%) scale(0.1);
+    opacity: 0;
+    transition: all 0.7s cubic-bezier(0.55, 0.085, 0.68, 0.53);
+  }
+
+  &.stage-flying {
+    display: none;
+  }
+}
+
+.envelope-wrapper {
+  position: absolute;
+  left: 80%;
+  bottom: 15px;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 45px;
+  z-index: 5;
+  perspective: 400px;
+  transition: all 0.4s ease;
+
+  &.stage-flying {
+    left: 120%;
+    bottom: 200px;
+    transform: translateX(-50%) rotate(25deg) scale(0.2);
+    opacity: 0;
+    transition: left 1.2s cubic-bezier(0.25, 1, 0.5, 1),
+                bottom 1.2s cubic-bezier(0.25, 1, 0.5, 1),
+                transform 1.2s ease,
+                opacity 1.1s ease;
+  }
+}
+
+.insta-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+
+  &.faded {
+    opacity: 0.4;
+    transform: scale(0.97);
+    pointer-events: none;
+  }
+}
+
+.btn-insta-submit {
+  margin-top: 0.5rem;
+  background: $pink-primary;
+  width: 100%;
+}

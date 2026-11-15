@@ -1,0 +1,502 @@
+@use '../variables' as *;
+
+.sarcophagus-ending-overlay {
+  background: rgba(14, 10, 5, 0.95);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 100;
+}
+
+.sarcophagus-cinematic-stage {
+  width: min(94vw, 440px);
+  padding: 1.6rem 1.2rem;
+  background: linear-gradient(180deg, $sandstone-dark 0%, $sandstone-deep 100%);
+  border: 2px solid $gold-primary;
+  border-radius: 24px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.9), 0 0 40px rgba(212, 175, 55, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  animation: reveal-card-in 0.6s ease-out forwards;
+}
+
+.sarcophagus-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.sarcophagus-stage-badge {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #ffd54f;
+  background: #352514;
+  padding: 3px 12px;
+  border-radius: $radius-pill;
+  border: 1px solid $gold-primary;
+}
+
+.sarcophagus-score-pill {
+  background: linear-gradient(135deg, #3e2e1a 0%, #26190e 100%);
+  border: 1.5px solid #ffd54f;
+  border-radius: $radius-pill;
+  padding: 6px 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: $gold-subtle;
+  font-size: 0.95rem;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 12px rgba(255, 213, 79, 0.45);
+  margin-bottom: 2px;
+
+  strong {
+    color: $gold-bright;
+    font-size: 1.15rem;
+    font-weight: 900;
+  }
+}
+
+.sarcophagus-title {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: $gold-subtle;
+  letter-spacing: 0.02em;
+}
+
+.sarcophagus-flight-info-banner {
+  margin: 2px 0 0;
+  font-size: 0.88rem;
+  color: #ffd54f;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 10px rgba(255, 213, 79, 0.5);
+  animation: pulse-flight-info 2s infinite ease-in-out;
+}
+
+@keyframes pulse-flight-info {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+/* Floating Letters Sky Cluster */
+.floating-letters-sky-cluster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  background: radial-gradient(ellipse at center, rgba(212, 175, 55, 0.15) 0%, rgba(20, 14, 8, 0.4) 80%);
+  border: 1px dashed rgba(255, 215, 0, 0.4);
+  border-radius: 14px;
+}
+
+.sky-cluster-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #ffe082;
+  font-weight: 800;
+}
+
+.sky-cluster-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: 340px;
+}
+
+.sky-empty-hint {
+  font-size: 0.8rem;
+  color: #d7ccc8;
+  font-style: italic;
+  padding: 4px;
+}
+
+.sky-letter-chip {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 900;
+  animation: sky-letter-hover 2.4s infinite ease-in-out alternate;
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.3, 1);
+
+  &.chip-gold {
+    background: linear-gradient(135deg, $gold-bright 0%, #ff8f00 100%);
+    color: #1a0f02;
+    border: 1px solid $gold-light;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.75);
+  }
+
+  &.chip-silver {
+    background: #3e3223;
+    color: #bcaaa4;
+    border: 1px solid #5d4037;
+    opacity: 0.6;
+  }
+
+  &.chip-launching {
+    transform: scale(1.4) translateY(-12px);
+    box-shadow: 0 0 20px #ffffff, 0 0 35px #ffd700;
+    z-index: 10;
+  }
+
+  &.chip-departed {
+    opacity: 0.15;
+    transform: scale(0.65);
+    filter: grayscale(1);
+  }
+}
+
+@keyframes sky-letter-hover {
+  0% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-5px) rotate(3deg); }
+  100% { transform: translateY(2px) rotate(-3deg); }
+}
+
+/* 3D Sarcophagus Box */
+.sarcophagus-3d-wrapper {
+  perspective: 1000px;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.sarcophagus-3d-box {
+  position: relative;
+  width: 100%;
+  background: linear-gradient(180deg, #2b1f13 0%, #150f09 100%);
+  border: 2px solid #8d6e12;
+  border-radius: 16px;
+  padding: 18px 12px;
+  box-shadow: inset 0 3px 12px rgba(0, 0, 0, 0.8), 0 8px 30px rgba(0, 0, 0, 0.6);
+  transform-style: preserve-3d;
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+
+  &.sarcophagus-flashing {
+    animation: sarcophagus-golden-flash 0.85s ease-out forwards;
+  }
+}
+
+@keyframes sarcophagus-golden-flash {
+  0% {
+    box-shadow: inset 0 3px 12px rgba(0, 0, 0, 0.8), 0 8px 30px rgba(0, 0, 0, 0.6);
+    border-color: #8d6e12;
+  }
+  32% {
+    box-shadow: 0 0 50px rgba(255, 215, 0, 0.95), 0 0 90px rgba(255, 236, 179, 0.9), inset 0 0 35px rgba(255, 255, 255, 0.85);
+    border-color: #fff9c4;
+    filter: brightness(1.28);
+  }
+  100% {
+    box-shadow: inset 0 3px 12px rgba(0, 0, 0, 0.8), 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 215, 0, 0.4);
+    border-color: $gold-bright;
+    filter: brightness(1);
+  }
+}
+
+/* Sarcophagus Lid */
+.sarcophagus-lid {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, $gold-primary 0%, $gold-dark 50%, $gold-bright 100%);
+  border: 2px solid #fff59d;
+  border-radius: 16px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 215, 0, 0.5);
+  transition: transform 1.2s cubic-bezier(0.2, 0.8, 0.25, 1), opacity 0.8s ease;
+  transform-origin: top center;
+}
+
+.lid-pharaoh-face {
+  font-size: 3.2rem;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
+}
+
+.lid-gold-ornament {
+  position: absolute;
+  inset: 8px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.lid-opened .sarcophagus-lid,
+.lid-animating-open .sarcophagus-lid {
+  transform: rotateX(85deg) translateY(-30px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lid-clickable {
+  cursor: pointer;
+}
+
+.lid-keyhole-lock {
+  position: absolute;
+  bottom: 14px;
+  width: 48px;
+  height: 48px;
+  background: radial-gradient(circle at 35% 35%, #ffd700 0%, #c49000 65%, #5a4103 100%);
+  border: 2px solid #fff9c4;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), inset 0 2px 4px rgba(255, 255, 255, 0.7);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 10;
+
+  &.lock-clickable {
+    cursor: pointer;
+
+    &:hover {
+      transform: scale(1.1) !important;
+      box-shadow: 0 0 22px rgba(255, 215, 0, 0.85), inset 0 2px 5px rgba(255, 255, 255, 0.9) !important;
+    }
+  }
+}
+
+.keyhole-slot {
+  width: 5px;
+  height: 14px;
+  background: #1a0f02;
+  border-radius: 2px 2px 2px 2px;
+  position: relative;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: -3.5px;
+    width: 12px;
+    height: 12px;
+    background: #1a0f02;
+    border-radius: 50%;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+  }
+}
+
+.sarcophagus-key-animation-zone {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 25;
+  pointer-events: none;
+}
+
+.sarcophagus-golden-key-actor {
+  font-size: 3.4rem;
+  filter: drop-shadow(0 0 16px rgba(255, 215, 0, 0.95)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8));
+  animation: key-insert-turn 1.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes key-insert-turn {
+  0% {
+    transform: translateY(-55px) scale(1.4) rotate(-35deg);
+    opacity: 0;
+  }
+  25% {
+    transform: translateY(-20px) scale(1.2) rotate(-15deg);
+    opacity: 1;
+  }
+  55% {
+    transform: translateY(22px) scale(0.95) rotate(0deg);
+    filter: drop-shadow(0 0 20px #ffffff);
+  }
+  75% {
+    transform: translateY(22px) scale(0.95) rotate(90deg);
+    filter: drop-shadow(0 0 35px #ffd700) brightness(1.3);
+  }
+  100% {
+    transform: translateY(22px) scale(0.85) rotate(90deg);
+    opacity: 0.9;
+  }
+}
+
+/* Interior & slots */
+.sarcophagus-interior {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sarcophagus-glow-aura {
+  position: absolute;
+  inset: -10px;
+  background: radial-gradient(ellipse at center, rgba(255, 215, 0, 0.22) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.sarcophagus-words-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.sarcophagus-word {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.sarcophagus-word-divider {
+  height: 4px;
+}
+
+.sarcophagus-slot {
+  position: relative;
+  width: 38px;
+  height: 50px;
+  background: #110b06;
+  border: 1.5px solid #5a4521;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(212, 175, 55, 0.2);
+  overflow: hidden;
+}
+
+.slot-gold-letter {
+  font-size: 1.35rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+
+  &.letter-was-collected {
+    background: linear-gradient(135deg, $gold-bright 0%, #ff8f00 100%);
+    color: #1a0f02;
+    border: 1.5px solid #ffffff;
+    box-shadow: 0 0 16px rgba(255, 215, 0, 0.9), inset 0 1px 2px #fff;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
+  }
+
+  &.letter-grayout {
+    background: linear-gradient(135deg, rgba(58, 48, 38, 0.85) 0%, rgba(30, 24, 18, 0.92) 100%);
+    color: #b0bec5;
+    border: 1.5px dashed rgba(176, 190, 197, 0.45);
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+    opacity: 0.65;
+    transform-origin: center center;
+  }
+
+  &.scale-up-reveal {
+    animation: grayout-scale-up-reveal 1.05s cubic-bezier(0.18, 0.85, 0.32, 1.2) both;
+  }
+}
+
+@keyframes grayout-scale-up-reveal {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+    filter: blur(4px);
+  }
+  65% {
+    transform: scale(1.16);
+    opacity: 0.85;
+    filter: blur(0px);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.65;
+    filter: blur(0px);
+  }
+}
+
+.dynamic-swoop-in {
+  animation: dynamic-curved-flight 1.15s cubic-bezier(0.25, 0.82, 0.35, 1.08) forwards;
+}
+
+@keyframes dynamic-curved-flight {
+  0% {
+    transform: translate(var(--start-x, 0px), var(--start-y, -100px)) scale(1.75) rotate(var(--rot, 20deg));
+    opacity: 0;
+    box-shadow: 0 0 30px #ffd700, 0 0 50px #ff9800;
+  }
+  45% {
+    transform: translate(var(--mid-x, 0px), var(--mid-y, -50px)) scale(1.3) rotate(calc(var(--rot, 20deg) * -0.5));
+    opacity: 1;
+  }
+  80% {
+    transform: translate(0, 2px) scale(1.08) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.sarcophagus-celebration-footer {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: footer-fade-in 0.6s ease-out;
+}
+
+@keyframes footer-fade-in {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.sarcophagus-final-count-badge {
+  background: rgba(255, 215, 0, 0.12);
+  border: 1px solid #ffd54f;
+  border-radius: $radius-pill;
+  padding: 5px 16px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: $gold-subtle;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+
+  strong {
+    color: $gold-bright;
+    font-weight: 900;
+  }
+}
+
+.sarcophagus-revealed-banner {
+  background: #352514;
+  border: 1.5px solid $gold-bright;
+  border-radius: 12px;
+  padding: 8px 18px;
+  font-size: 1.1rem;
+  color: $gold-light;
+  box-shadow: 0 4px 18px rgba(255, 215, 0, 0.35);
+
+  strong {
+    color: $gold-bright;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+  }
+}
