@@ -734,6 +734,7 @@ export function usePixiGame({
         // Restore exactly 9 letters collected from Spring, Winter, and Museum
         runtime.collectedLetters = [...runtime.checkpointExhibitionLetters]
         runtime.spawnedLetterIndex = 9
+        runtime.exhibitionEventTriggered = false
 
         runtime.nextLetterAt = runtime.exhibitionStart + 3500
         runtime.nextHazardAt = runtime.exhibitionStart + 1400
@@ -1179,26 +1180,6 @@ export function usePixiGame({
         runtime.postFreezeAction = () => {
           runtime.eventWind = -130 * runtime.metrics.xScale * DIFFICULTY_CONFIGS[runtime.difficulty].eventWindMultiplier
           runtime.eventEndsAt = runtime.elapsed + 4000 * DIFFICULTY_CONFIGS[runtime.difficulty].eventDurationMultiplier
-        }
-        syncHud(true)
-        return
-      }
-
-      // Event 4: Invisible Exhibition darkness descent (~6.5s into Exhibition)
-      if (
-        !runtime.exhibitionEventTriggered &&
-        runtime.biome === 'invisible_exhibition' &&
-        runtime.elapsed >= runtime.exhibitionStart + 6500
-      ) {
-        runtime.exhibitionEventTriggered = true
-        runtime.eventBanner = {
-          title: '🕶️ CAŁKOWITY ZMROK! 🕶️',
-          subtitle: 'Zaufaj poświacie chrabąszcza i uważaj na ślepia w cieniach!',
-          type: 'darkness',
-        }
-        runtime.freezeUntil = runtime.elapsed + 2400
-        runtime.postFreezeAction = () => {
-          message('Wyczuwasz szelest skrzydeł nietoperzy... 🦇', 2600)
         }
         syncHud(true)
         return
