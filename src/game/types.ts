@@ -13,6 +13,7 @@ export type DifficultyConfig = {
   eventWindMultiplier: number
   eventDurationMultiplier: number
   sideDamage: boolean
+  spotlightScaleMultiplier: number
 }
 
 export type BiomeId = 'spring' | 'winter' | 'museum' | 'invisible_exhibition'

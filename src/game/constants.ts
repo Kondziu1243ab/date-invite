@@ -12,6 +12,7 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     eventWindMultiplier: 0.75,
     eventDurationMultiplier: 0.8,
     sideDamage: false,
+    spotlightScaleMultiplier: 0.88,
   },
   medium: {
     label: 'Średni',
@@ -24,6 +25,7 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     eventWindMultiplier: 1.0,
     eventDurationMultiplier: 1.0,
     sideDamage: false,
+    spotlightScaleMultiplier: 0.72,
   },
   hard: {
     label: 'Trudny',
@@ -36,6 +38,7 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     eventWindMultiplier: 1.25,
     eventDurationMultiplier: 1.2,
     sideDamage: true,
+    spotlightScaleMultiplier: 0.58,
   },
 }
 

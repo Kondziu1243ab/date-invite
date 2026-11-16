@@ -816,7 +816,8 @@ export function usePixiGame({
       drawBackdrop(backdrop, runtime.metrics, runtime.biome)
       updatePlayerGraphic()
       if (spotlightSprite) {
-        const sz = Math.max(runtime.metrics.width, runtime.metrics.height) * 2.8
+        const mult = DIFFICULTY_CONFIGS[runtime.difficulty]?.spotlightScaleMultiplier ?? 0.72
+        const sz = Math.max(runtime.metrics.width, runtime.metrics.height) * 2.8 * mult
         spotlightSprite.width = sz
         spotlightSprite.height = sz
         spotlightSprite.position.set(runtime.player.x, runtime.player.y)
@@ -1239,7 +1240,8 @@ export function usePixiGame({
       // Update spotlight position smoothly tracking chrabąszcz in darkness
       if (runtime.biome === 'invisible_exhibition') {
         const flicker = 1 + Math.sin(runtime.elapsed / 170) * 0.03 + Math.cos(runtime.elapsed / 290) * 0.02
-        const sz = Math.max(runtime.metrics.width, runtime.metrics.height) * 2.8 * flicker
+        const mult = DIFFICULTY_CONFIGS[runtime.difficulty]?.spotlightScaleMultiplier ?? 0.72
+        const sz = Math.max(runtime.metrics.width, runtime.metrics.height) * 2.8 * mult * flicker
         spotlightSprite.width = sz
         spotlightSprite.height = sz
         spotlightSprite.position.set(runtime.player.x, runtime.player.y)
