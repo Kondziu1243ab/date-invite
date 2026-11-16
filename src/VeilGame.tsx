@@ -448,29 +448,92 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
     gameState === 'checkpoint'
 
   const isEndingActive = gameState === 'ending' && endingPhase !== 'none'
+  const isPlaying = gameState === 'playing'
+  const showHeaderAndFooter =
+    gameState === 'ready' ||
+    gameState === 'checkpoint' ||
+    gameState === 'paused' ||
+    gameState === 'gameover'
 
   return (
-    <div className={`veil-game-wrapper ${isEndingActive ? 'ending-stage-active' : ''}`}>
-      {!isEndingActive && (
-        <GameHud
-          lives={lives}
-          biome={biome}
-          difficulty={difficulty}
-          soundMuted={soundMuted}
-          isPauseDisabled={isPauseDisabled}
-          isPaused={gameState === 'paused'}
-          progress={progress}
-          collectedLetters={collectedLetters}
-          hasDiamondCard={hasDiamondCard}
-          onToggleSound={handleToggleSound}
-          onTogglePause={togglePause}
-          onSkip={handleSkipGame}
-        />
+    <div
+      className={`veil-game-wrapper ${isPlaying ? 'mode-playing' : 'mode-info'} ${
+        isEndingActive ? 'ending-stage-active' : ''
+      }`}
+    >
+      {showHeaderAndFooter && (
+        <div className="game-hud-layout-header">
+          <GameHud
+            lives={lives}
+            biome={biome}
+            difficulty={difficulty}
+            soundMuted={soundMuted}
+            isPauseDisabled={isPauseDisabled}
+            isPaused={gameState === 'paused'}
+            progress={progress}
+            collectedLetters={collectedLetters}
+            hasDiamondCard={hasDiamondCard}
+            onToggleSound={handleToggleSound}
+            onTogglePause={togglePause}
+            onSkip={handleSkipGame}
+          />
+        </div>
       )}
 
       <div className={`game-arena-container ${biome}`}>
         <div ref={hostRef} className="veil-pixi-host" aria-label="Obszar gry" />
         {toast && <div className="biome-toast">{toast}</div>}
+
+        {/* Floating HUD during active fullscreen flight */}
+        {isPlaying && (
+          <div className="in-game-floating-hud" aria-label="HUD gry">
+            <div className="floating-lives" aria-label={`Pozostałe życia: ${lives}`}>
+              {Array.from({ length: 3 }).map((_, index) => (
+                <span
+                  key={index}
+                  className={`floating-heart ${index < lives ? 'heart-alive' : 'heart-lost'}`}
+                >
+                  {index < lives ? '❤️' : '🖤'}
+                </span>
+              ))}
+              {hasDiamondCard && (
+                <span className="floating-card-badge" title="Szczęśliwa Dama Karo">
+                  ♦️
+                </span>
+              )}
+            </div>
+
+            <div className="floating-actions">
+              <button
+                type="button"
+                className="floating-action-btn"
+                onClick={handleToggleSound}
+                aria-label={soundMuted ? 'Włącz dźwięk' : 'Wycisz dźwięk'}
+                title={soundMuted ? 'Włącz dźwięk' : 'Wycisz dźwięk'}
+              >
+                {soundMuted ? '🔇' : '🔊'}
+              </button>
+              <button
+                type="button"
+                className="floating-action-btn"
+                onClick={togglePause}
+                aria-label="Pauza"
+                title="Pauza"
+              >
+                ⏸️
+              </button>
+              <button
+                type="button"
+                className="floating-action-btn floating-skip-btn"
+                onClick={handleSkipGame}
+                aria-label="Pomiń etap"
+                title="Pomiń etap"
+              >
+                Pomiń ⏭️
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Event banner */}
         {eventBanner && <GameEventBanner eventBanner={eventBanner} />}
@@ -588,7 +651,7 @@ export default function VeilGame({ onComplete, skipToEndTest }: VeilGameProps) {
         )}
       </div>
 
-      {!isEndingActive && (
+      {showHeaderAndFooter && (
         <div className="game-steering-hint">
           <span>Tapuj lewo/prawo, aby sterować</span>
           <span>•</span>

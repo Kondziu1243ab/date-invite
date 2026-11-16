@@ -279,10 +279,18 @@ export function usePixiGame({
       const bat = acquireBat()
       const player = runtime.player
 
+      // Check if another bat is already active (relevant on 'hard' mode)
+      const otherActiveBat = bats.find((b) => b.active && b !== bat)
+
       // Difficulty-based spawn height:
-      // On 'easy' level: eyes spawn strictly at the top ceiling zone so the player can fly safely without accidental triggers.
+      // On 'easy' level: eyes spawn strictly at the top ceiling zone.
       // On 'medium' and 'hard': can spawn in middle corridor (~65%) or upper zone (~35%).
-      const isMiddle = runtime.difficulty !== 'easy' && Math.random() < 0.65
+      // If another bat is already in the middle, place this one at the top (and vice versa) for great variety.
+      let isMiddle = runtime.difficulty !== 'easy' && Math.random() < 0.65
+      if (otherActiveBat) {
+        isMiddle = otherActiveBat.y < m.height * 0.25
+      }
+
       if (isMiddle) {
         // Middle flight zone where player actively maneuvers
         bat.y = m.height * (0.28 + Math.random() * 0.28)
@@ -295,13 +303,19 @@ export function usePixiGame({
       const minSideDist = 130 * m.unit
       const midX = m.width * 0.5
 
-      if (player.x < midX) {
-        // Player is on left side -> spawn safely to the right of player
+      // If another bat is on one side, prefer spawning this bat on the opposite side
+      let preferRight = player.x < midX
+      if (otherActiveBat) {
+        preferRight = otherActiveBat.x < midX
+      }
+
+      if (preferRight) {
+        // Spawn on right side
         const minX = Math.min(Math.max(player.x + minSideDist, midX + 20 * m.xScale), m.width - 45 * m.xScale)
         const maxX = m.width - 36 * m.xScale
         bat.x = minX + Math.random() * Math.max(10, maxX - minX)
       } else {
-        // Player is on right side -> spawn safely to the left of player
+        // Spawn on left side
         const minX = 36 * m.xScale
         const maxX = Math.max(Math.min(player.x - minSideDist, midX - 20 * m.xScale), 45 * m.xScale)
         bat.x = minX + Math.random() * Math.max(10, maxX - minX)
@@ -707,6 +721,7 @@ export function usePixiGame({
     }
 
     const resumeCheckpointInternal = () => {
+      applyDifficulty(difficultyRef.current)
       recycleAll()
 
       if (runtime.hasReachedExhibitionCheckpoint) {
@@ -780,17 +795,22 @@ export function usePixiGame({
 
     const layout = () => {
       if (!app) return
+      const targetW = Math.max(host.clientWidth, 1)
+      const targetH = Math.max(host.clientHeight, 1)
+      if (app.screen.width !== targetW || app.screen.height !== targetH) {
+        app.renderer.resize(targetW, targetH)
+      }
       const old = runtime.metrics
       const x = old.width ? runtime.player.x / old.width : 0.5
       const y = old.height ? runtime.player.y / old.height : 0.3
-      runtime.metrics = createMetrics(Math.max(app.screen.width, 1), Math.max(app.screen.height, 1))
+      runtime.metrics = createMetrics(targetW, targetH)
       runtime.player.x = Math.min(
         Math.max(x * runtime.metrics.width, 28 * runtime.metrics.xScale),
         runtime.metrics.width - 28 * runtime.metrics.xScale
       )
       runtime.player.y = Math.min(
-        Math.max(y * runtime.metrics.height, 58 * runtime.metrics.yScale),
-        runtime.metrics.height - 30 * runtime.metrics.yScale
+        Math.max(y * runtime.metrics.height, 40 * runtime.metrics.yScale),
+        runtime.metrics.height - 18 * runtime.metrics.yScale
       )
       drawBackdrop(backdrop, runtime.metrics, runtime.biome)
       updatePlayerGraphic()
@@ -834,12 +854,12 @@ export function usePixiGame({
         player.vx = -Math.abs(player.vx) * 0.35
         if (DIFFICULTY_CONFIGS[runtime.difficulty].sideDamage) damage()
       }
-      if (player.y < 36 * m.yScale) {
-        player.y = 36 * m.yScale
+      if (player.y < 30 * m.yScale) {
+        player.y = 30 * m.yScale
         player.vy = Math.max(player.vy, 80 * m.yScale)
       }
-      if (player.y > m.height - 32 * m.yScale) {
-        player.y = m.height - 32 * m.yScale
+      if (player.y > m.height - 18 * m.yScale) {
+        player.y = m.height - 18 * m.yScale
         player.vy = -300 * m.yScale
         damage()
       }
@@ -1208,14 +1228,20 @@ export function usePixiGame({
         runtime.nextLetterAt = runtime.elapsed + letterInterval + Math.random() * 800
       }
 
-      // Spawn bat in Invisible Exhibition (strictly 1 active bat at a time)
+      // Spawn bat in Invisible Exhibition (1 active bat on easy/medium, up to 2 bats on hard)
+      const maxBats = runtime.difficulty === 'hard' ? 2 : 1
+      const activeBatsCount = bats.filter((b) => b.active).length
       if (
         runtime.biome === 'invisible_exhibition' &&
         runtime.elapsed >= runtime.nextBatSpawnAt &&
-        bats.filter((b) => b.active).length === 0
+        activeBatsCount < maxBats
       ) {
         spawnBat()
-        runtime.nextBatSpawnAt = runtime.elapsed + 4500 + Math.random() * 2000
+        const nextDelay =
+          runtime.difficulty === 'hard'
+            ? (activeBatsCount === 0 ? 2400 : 4200) + Math.random() * 1400
+            : 4500 + Math.random() * 2000
+        runtime.nextBatSpawnAt = runtime.elapsed + nextDelay
       }
 
       // Spawn hearts when wounded
@@ -1274,12 +1300,16 @@ export function usePixiGame({
       steer(x < rect.width / 2 ? -1 : 1)
     }
 
+    const preventTouchScroll = (e: TouchEvent) => {
+      if (e.cancelable) e.preventDefault()
+    }
+
     const init = async () => {
       try {
         const nextApp = new Application()
         await nextApp.init({
           resizeTo: host,
-          backgroundColor: 0x2a1e12,
+          backgroundAlpha: 0,
           antialias: true,
           autoDensity: true,
           resolution: window.devicePixelRatio || 1,
@@ -1316,6 +1346,7 @@ export function usePixiGame({
         })
 
         host.addEventListener('pointerdown', handleHostPointer)
+        host.addEventListener('touchmove', preventTouchScroll, { passive: false })
 
         const skipCurrentStage = () => {
           applyDifficulty(difficultyRef.current)
@@ -1495,6 +1526,7 @@ export function usePixiGame({
       stopMuseumJazzMusic()
       restoreNormalMusic()
       host.removeEventListener('pointerdown', handleHostPointer)
+      host.removeEventListener('touchmove', preventTouchScroll)
       resizeObserver?.disconnect()
       window.removeEventListener('keydown', handleKey)
       controlsRef.current = null

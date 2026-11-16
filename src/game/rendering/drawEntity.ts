@@ -329,80 +329,86 @@ export function drawEntity(entity: Entity, biome: BiomeId, unit: number): void {
       const r = entity.radius
 
       // ARTIST / RESTORATION PAINTBRUSH (Pędzelek malarski / konserwatorski)
-      // 1. Sleek wooden handle (tapered shaft)
+      // Sleek wooden handle (longer, tapered shaft)
       graphics
         .poly(
           [
-            -r * 0.14, -r * 1.35,
-            r * 0.14, -r * 1.35,
-            r * 0.18, -r * 0.18,
-            -r * 0.18, -r * 0.18,
+            -r * 0.16, -r * 1.5,
+            r * 0.16, -r * 1.5,
+            r * 0.22, -r * 0.15,
+            -r * 0.22, -r * 0.15,
           ],
           true
         )
         .fill(0x5d4037)
-        .stroke({ width: 1.0 * unit, color: 0x3e2723 })
+        .stroke({ width: 1.2 * unit, color: 0x3e2723 })
 
       // Handle highlight stripe (giving 3D cylindrical wooden look)
       graphics
         .poly(
           [
-            -r * 0.05, -r * 1.3,
-            r * 0.04, -r * 1.3,
-            r * 0.06, -r * 0.2,
-            -r * 0.03, -r * 0.2,
+            -r * 0.06, -r * 1.45,
+            r * 0.05, -r * 1.45,
+            r * 0.07, -r * 0.18,
+            -r * 0.04, -r * 0.18,
           ],
           true
         )
         .fill(0x8d6e63)
 
       // Handle top rounded tip (czerwona lakierowana końcówka rączki)
-      graphics.circle(0, -r * 1.35, r * 0.16).fill(0xd32f2f)
+      graphics.circle(0, -r * 1.5, r * 0.18).fill(0xd32f2f)
 
       // 2. Shiny silver / chrome metal ferrule (skuwka pędzla)
       graphics
-        .rect(-r * 0.24, -r * 0.18, r * 0.48, r * 0.42)
-        .fill(0xcfd8dc)
-        .stroke({ width: 1.2 * unit, color: 0x78909c })
+        .rect(-r * 0.28, -r * 0.15, r * 0.56, r * 0.45)
+        .fill(0xdfe6e9)
+        .stroke({ width: 1.4 * unit, color: 0x636e72 })
       // Ferrule crimp lines (metalowe rowki skuwki)
-      graphics.moveTo(-r * 0.24, -r * 0.05).lineTo(r * 0.24, -r * 0.05).stroke({ width: 1.0 * unit, color: 0x546e7a })
-      graphics.moveTo(-r * 0.24, r * 0.1).lineTo(r * 0.24, r * 0.1).stroke({ width: 1.0 * unit, color: 0x546e7a })
+      graphics.moveTo(-r * 0.28, -r * 0.02).lineTo(r * 0.28, -r * 0.02).stroke({ width: 1.1 * unit, color: 0x546e7a })
+      graphics.moveTo(-r * 0.28, r * 0.15).lineTo(r * 0.28, r * 0.15).stroke({ width: 1.1 * unit, color: 0x546e7a })
       // Metallic reflection shine
-      graphics.rect(-r * 0.08, -r * 0.18, r * 0.08, r * 0.42).fill({ color: 0xffffff, alpha: 0.6 })
+      graphics.rect(-r * 0.09, -r * 0.15, r * 0.09, r * 0.45).fill({ color: 0xffffff, alpha: 0.7 })
 
-      // 3. Bristles (ciemne naturalne włosie pędzelka)
+      // 3. Bristles (ciemne naturalne włosie pędzelka, rozszerzające się ku końcowi)
       graphics
         .poly(
           [
-            -r * 0.23, r * 0.24,
-            r * 0.23, r * 0.24,
-            r * 0.35, r * 0.85,
-            0, r * 1.2,
-            -r * 0.35, r * 0.85,
+            -r * 0.27, r * 0.3,
+            r * 0.27, r * 0.3,
+            r * 0.38, r * 0.85,
+            0, r * 1.25,
+            -r * 0.38, r * 0.85,
           ],
           true
         )
         .fill(0x2d1f18)
-        .stroke({ width: 1.0 * unit, color: 0x1a120e })
+        .stroke({ width: 1.2 * unit, color: 0x1a120e })
 
-      // 4. Colorful wet paint on the brush tip (jaskrawa lazurowa farba na czubku)
+      // Bristle texture lines (linie włosia)
+      graphics.moveTo(-r * 0.14, r * 0.3).lineTo(-r * 0.16, r * 0.85).stroke({ width: 0.9 * unit, color: 0x4e342e })
+      graphics.moveTo(0, r * 0.3).lineTo(0, r * 1.05).stroke({ width: 0.9 * unit, color: 0x4e342e })
+      graphics.moveTo(r * 0.14, r * 0.3).lineTo(r * 0.16, r * 0.85).stroke({ width: 0.9 * unit, color: 0x4e342e })
+
+      // 4. Colorful wet paint on the brush tip (jaskrawa lazurowa farba artystyczna)
       graphics
         .poly(
           [
-            -r * 0.28, r * 0.72,
-            r * 0.28, r * 0.72,
-            0, r * 1.2,
+            -r * 0.32, r * 0.75,
+            r * 0.32, r * 0.75,
+            0, r * 1.25,
           ],
           true
         )
         .fill(0x00bcd4)
-        .stroke({ width: 0.8 * unit, color: 0x00838f })
+        .stroke({ width: 1.0 * unit, color: 0x00838f })
 
       // Wet paint gloss highlight
-      graphics.circle(-r * 0.08, r * 0.82, 1.4 * unit).fill({ color: 0xffffff, alpha: 0.85 })
+      graphics.circle(-r * 0.09, r * 0.85, 1.6 * unit).fill({ color: 0xffffff, alpha: 0.85 })
 
       // 5. Fresh paint drip falling from the brush tip!
-      graphics.circle(0, r * 1.38, 2.2 * unit).fill(0x00bcd4)
+      graphics.circle(0, r * 1.45, 2.4 * unit).fill(0x00bcd4)
+      graphics.circle(0, r * 1.65, 1.4 * unit).fill(0x00bcd4)
       return
     }
 
